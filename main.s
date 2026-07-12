@@ -22,7 +22,12 @@ main:
     j SETUP                      # SETUP renderiza o mapa e cai no GAME_LOOP
 
 # ---- Modulos ------------------------------------------------------- #
-.include "gameloop.s"   # GAME_LOOP (orquestrador) + stubs dos subsistemas
-.include "musicFunct.s" # MUSIC_LOOP / PLAY_MUSIC (musica multi-canal)
-.include "setup.s"      # SETUP (render inicial do mapa)
-.include "render.s"     # RENDER_WORD / RENDER_COLOR / RENDER_MAP
+.include "gameloop.s"          # GAME_LOOP (orquestrador) + stubs restantes
+.include "input.s"             # INPUT_READ (teclado -> bitmask)
+.include "player.s"            # PLAYER_UPDATE (movimento, pulo, gravidade)
+.include "render_map_frame.s"  # RENDER_MAP_FRAME (redesenho do mapa por frame)
+.include "render_player.s"     # RENDER_PLAYER (desenha o personagem)
+.include "render_sprite.s"     # RENDER_SPRITE (desenho de sprite individual)
+.include "musicFunct.s"        # MUSIC_LOOP / PLAY_MUSIC (musica multi-canal)
+.include "setup.s"             # SETUP (render inicial do mapa)
+.include "render.s"            # RENDER_WORD / RENDER_COLOR / RENDER_MAP
