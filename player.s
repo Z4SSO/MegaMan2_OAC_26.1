@@ -31,7 +31,8 @@ PLAYER_UPDATE:
     andi t2, t1, INPUT_LEFT
     beqz t2, PU_CHECK_RIGHT
         lw   t3, PLAYER_scr_x(t0)
-        addi t3, t3, -PLAYER_SPEED
+        li   t4, PLAYER_SPEED
+        sub  t3, t3, t4
         sw   t3, PLAYER_scr_x(t0)
         li   t3, DIR_LEFT
         sw   t3, PLAYER_dir(t0)
