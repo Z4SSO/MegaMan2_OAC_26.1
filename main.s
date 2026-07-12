@@ -15,7 +15,7 @@ GAME_LOOP:
  call MUSIC_LOOP
  j GAME_LOOP
  
-.include "musicFunct.asm"
+.include "musicFunct.s"
 .include "setup.s"
 .include "render.s"	
 
