@@ -66,10 +66,11 @@ PLAY_MUSIC:
     lw   t3, 4(s1)
     lw   t4, 8(s1)
 
-    beqz t3, TOCA_NOTA
-    li a7,30
+    li a7,30             # lê o tempo atual SEMPRE, antes de qualquer desvio
     ecall
-    mv t2,a0              # guarda o tempo atual
+    mv t2,a0             # t2 = tempo atual (válido em todos os caminhos)
+
+    beqz t3, TOCA_NOTA   # timer==0 -> 1a nota: cai em TOCA_NOTA com t2 já válido
     blt t2,t3,NAO_TERMINOU
     
     addi t0,t0,8
