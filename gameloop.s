@@ -31,19 +31,15 @@ GAME_LOOP:
     li   t2, frame_rate
     bltu a0, t2, GAME_LOOP       # ainda nao deu o tempo do frame -> espera
 
-# ---- 2. Novo frame: incrementa tick -------------------------------- #
-#   NOTA: a alternancia de frame (double buffering) foi REMOVIDA por    #
-#   enquanto. Ela so evita flicker quando TODO o conteudo e redesenhado #
-#   a cada frame no buffer invisivel. Como RENDER_MAP_FRAME e os        #
-#   renders de entidade ainda sao stubs, alternar mostraria um frame    #
-#   vazio a cada 2 -> flicker. Mantemos GS_frame fixo em 0 (o frame que #
-#   o SETUP desenhou). Para reativar double buffering quando o redesenho#
-#   completo por frame existir, descomente as 3 linhas abaixo e o       #
-#   'sw t1' no passo 15.                                                #
-#   # lw   t1, GS_frame(t0)                                             #
-#   # xori t1, t1, 1                                                    #
-#   # sw   t1, GS_frame(t0)                                             #
+# ---- 2. Novo frame: alterna buffer e incrementa tick --------------- #
+#   Double buffering REATIVADO: agora RENDER_MAP_FRAME redesenha o mapa #
+#   inteiro a cada frame no buffer invisivel, entao alternar os frames  #
+#   da a imagem limpa (sem rastro e sem flicker).                       #
     la   t0, GAME_STATE
+    lw   t1, GS_frame(t0)
+    xori t1, t1, 1               # alterna 0<->1 (double buffering)
+    sw   t1, GS_frame(t0)
+
     lw   t2, GS_tick(t0)
     addi t2, t2, 1
     sw   t2, GS_tick(t0)         # contador global de frames
@@ -102,24 +98,11 @@ GAME_LOOP:
 # ==================================================================== #
 
 # -------------------------------------------------------------------- #
-#  INPUT_READ                                                          #
-#  Le o teclado (KDMMIO) e monta a bitmask em GAME_STATE.input_bits.   #
-#  Args: nenhum.  Retorno: nenhum (escreve em memoria).                #
-#  TODO: ler KDMMIO_Ctrl/KDMMIO_Data; mapear cada tecla p/ INPUT_*.    #
+#  INPUT_READ         -> implementado em input.s                       #
+#  PLAYER_UPDATE      -> implementado em player.s                      #
+#  RENDER_MAP_FRAME   -> implementado em render_map_frame.s            #
+#  RENDER_PLAYER      -> implementado em render_player.s               #
 # -------------------------------------------------------------------- #
-INPUT_READ:
-    ret
-
-# -------------------------------------------------------------------- #
-#  PLAYER_UPDATE                                                       #
-#  Aplica input ao PLAYER: anda esq/dir, pula, aplica gravidade,       #
-#  atualiza on_ground, direcao e status de animacao.                   #
-#  Args: nenhum.  Le/escreve struct PLAYER e GAME_STATE.input_bits.    #
-#  TODO: mover em X conforme INPUT_LEFT/RIGHT; iniciar pulo em         #
-#        INPUT_JUMP se on_ground; integrar vy com gravidade.           #
-# -------------------------------------------------------------------- #
-PLAYER_UPDATE:
-    ret
 
 # -------------------------------------------------------------------- #
 #  ABILITY_UPDATE                                                      #
@@ -170,37 +153,12 @@ DOOR_UPDATE:
 
 # -------------------------------------------------------------------- #
 #  RENDER_MAP_FRAME                                                    #
-#  Wrapper de alto nivel do RENDER_MAP: monta os argumentos (endereco  #
-#  do mapa atual, X/Y iniciais, offsets, largura/altura da tela) a     #
-#  partir do estado (CURRENT_MAP / MAP_INFO) e entao chama RENDER_MAP. #
-#  Redesenha o mapa todo frame para apagar o rastro das entidades.     #
-#                                                                      #
-#  IMPORTANTE: o RENDER_MAP de render.s NAO pode ser chamado "cru" --  #
-#  ele exige a0=addr do mapa, a1=X, a2=Y, a3/a4=offsets, a6/a7=tela,   #
-#  t2/t3=contadores, tp=deslocamento. Montar tudo isso e o trabalho    #
-#  desta rotina. Enquanto stub, nao faz nada (o mapa que o SETUP ja    #
-#  desenhou permanece na tela).                                        #
-#  TODO: replicar o bloco de setup de args de MAP1_SETUP (setup.s)     #
-#        aqui lendo CURRENT_MAP/MAP_INFO, e depois: call RENDER_MAP.   #
-# -------------------------------------------------------------------- #
-RENDER_MAP_FRAME:
-    ret
-
 # -------------------------------------------------------------------- #
 #  RENDER_ENTITIES                                                     #
 #  Desenha inimigos, projeteis e itens (chama RENDER_WORD por sprite). #
 #  TODO: iterar pools; usar RENDER_WORD com status p/ animacao.        #
 # -------------------------------------------------------------------- #
 RENDER_ENTITIES:
-    ret
-
-# -------------------------------------------------------------------- #
-#  RENDER_PLAYER                                                       #
-#  Desenha o Mega Man em (PLAYER_scr_x, scr_y) com sprite conforme     #
-#  PLAYER_status e PLAYER_dir. Reqs 3.                                 #
-#  TODO: chamar RENDER_WORD com a sprite do Mega Man; espelhar por dir.#
-# -------------------------------------------------------------------- #
-RENDER_PLAYER:
     ret
 
 # -------------------------------------------------------------------- #

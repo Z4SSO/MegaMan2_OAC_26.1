@@ -15,6 +15,13 @@
 # setup de excecao no inicio do .text e nao e necessario neste projeto).
 .eqv BITMAP_FRAME_SELECT  0xFF200604
 
+# -------------------- Enderecos do teclado (KDMMIO) ----------------- #
+# Mesmo esquema: definidos localmente para nao depender do MACROSv24.s.
+#   KDMMIO_CTRL: bit 0 = 1 quando ha tecla disponivel para ler.
+#   KDMMIO_DATA: valor ASCII da tecla (ler consome o caractere).
+.eqv KDMMIO_CTRL  0xFF200000
+.eqv KDMMIO_DATA  0xFF200004
+
 # Double buffering: o bitmap tem 2 frames (0 e 1). So compensa alternar
 # entre eles quando TODO o conteudo e redesenhado a cada frame no frame
 # invisivel antes da troca. Enquanto o redesenho completo por frame nao
@@ -42,6 +49,18 @@
 # -------------------- Direcao do player ----------------------------- #
 .eqv DIR_RIGHT  0
 .eqv DIR_LEFT   1
+
+# -------------------- Constantes de fisica -------------------------- #
+# Valores inteiros em pixels/frame. Ajuste fino depois de ver na tela.
+.eqv PLAYER_SPEED     2    # velocidade horizontal (px por frame)
+.eqv PLAYER_JUMP_VY  -8    # impulso inicial do pulo (negativo = pra cima)
+.eqv GRAVITY          1    # aceleracao da gravidade (px/frame por frame)
+.eqv MAX_FALL_VY      10   # velocidade terminal de queda (limita vy)
+
+# Chao provisorio (Y em pixels na tela) enquanto COLLISION_UPDATE nao
+# existe. So evita queda infinita para dar pra ver o pulo funcionando.
+# Quando a colisao com tiles estiver pronta, REMOVA este uso em player.s.
+.eqv TEMP_GROUND_Y   160  # Y do "chao" de teste (bordo inferior do player)
 
 # ==================================================================== #
 #  GAME_STATE  --  estado geral, uma instancia                         #
@@ -100,3 +119,32 @@ PLAYER:
     .word 0             # PLAYER_ability (0 = Mega Buster)
     .word 0             # PLAYER_vy
     .word 0             # PLAYER_invuln
+
+# ==================================================================== #
+#  PLAYER_SPRITE  --  PLACEHOLDER 16x16 (256 bytes)                    #
+#  Bloco de cor solida so para validar o RENDER_PLAYER e o movimento   #
+#  antes de o sprite real do personagem (feito pelo colega) chegar.    #
+#  Formato: 1 byte por pixel (indice de cor da paleta OAC), 16x16.     #
+#  Cor 40 = tom vivo que contrasta com o mapa. SUBSTITUIR pelo sprite  #
+#  real: basta trocar este bloco por .byte's do personagem (mesmo      #
+#  tamanho) ou apontar PLAYER_SPRITE para o novo .data.                #
+# ==================================================================== #
+.eqv PLAYER_W  16
+.eqv PLAYER_H  16
+PLAYER_SPRITE:
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
