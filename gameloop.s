@@ -78,7 +78,7 @@ GAME_LOOP:
 # ==================================================================== #
     la   t0, GAME_STATE
     lw   t1, GS_frame(t0)        # com double buffering off, sempre 0
-    li   t2, BITMAP_FRAME_SELECT # endereco de selecao de frame do bitmap
+    li   t2, VGAFRAMESELECT      # endereco de selecao de frame do bitmap (MACROSv24)
     sw   t1, 0(t2)               # mostra o frame desenhado (frame 0 por ora)
 
     li   a7, 30                  # ecall 30 = tempo do sistema em ms

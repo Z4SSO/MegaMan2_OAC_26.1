@@ -1,27 +1,29 @@
 # ==================================================================== #
-#  input.s  --  Leitura do teclado (subsistema INPUT_READ)            #
+#  input.s  --  Leitura do teclado via KDMMIO (PADRAO, PC + DE2)       #
 #                                                                      #
-#  Le o teclado via KDMMIO e monta uma bitmask das teclas ativas em    #
-#  GAME_STATE.input_bits. Os outros subsistemas consultam essa mascara #
-#  (nunca leem o hardware direto), o que mantem o input desacoplado.   #
+#  Le o KDMMIO (teclado traduzido para ASCII) e monta a bitmask das    #
+#  teclas ativas em GAME_STATE.input_bits. Funciona no RARS, no        #
+#  FPGRARS (PC) E na DE2 -- o KDMMIO e emulado em todos os ambientes,  #
+#  entao esta e a versao PADRAO para desenvolvimento e apresentacao.   #
 #                                                                      #
-#  Deteccao de "acabou de apertar" (borda de subida): NAO e feita aqui.#
-#  O GAME_LOOP salva o input do frame anterior em GS_input_prev antes  #
-#  de chamar INPUT_READ; quem precisa de borda faz:                    #
-#      borda = input_bits AND (NOT input_prev)                         #
+#  (Existe tambem input_scancode.s, que le o Buffer0Teclado com estado #
+#  real por tecla, mas SO funciona na DE2 fisica -- ver aquele arquivo.#
+#  So um dos dois deve ser incluido no main.s por vez.)                #
 #                                                                      #
-#  LIMITACAO DO HARDWARE (honesta): o KDMMIO entrega UMA tecla por     #
-#  leitura (o ultimo caractere digitado), nao um conjunto de teclas    #
-#  simultaneas. Logo, num mesmo frame, so uma tecla e reconhecida.     #
-#  Isso e o mesmo que o projeto Metroid enfrentava. Para andar-e-pular #
-#  ao mesmo tempo de forma fluida, uma evolucao futura seria manter    #
-#  estado "held" por tecla com timeout; por ora, seguimos o modelo     #
-#  simples de uma tecla por frame.                                     #
+#  LIMITACAO DO KDMMIO: e um buffer de eventos, nao estado de tecla.   #
+#  Segurar uma tecla gera auto-repeat com intervalos, e outra tecla    #
+#  interrompe esse repeat. Sem tratamento, o movimento picotaria e uma #
+#  direcao "sumiria" apos um pulo. Mitigamos com AUTO-HOLD por timeout:#
+#  teclas de MOVIMENTO ficam ativas por HELD_TIMEOUT frames apos o     #
+#  ultimo evento; teclas de ACAO (pulo/tiro/troca) valem so no frame   #
+#  do evento. Nao e estado perfeito como o scancode, mas funciona em   #
+#  todo ambiente e deixa o controle jogavel.                           #
 # ==================================================================== #
 
-# -------------------- Mapa de teclas (reconfiguravel) --------------- #
-# Trocar o layout de controles = mudar SO estas constantes.
-# Valores ASCII numericos (o RARS nao aceita literais 'a' em .eqv).
+# -------------------- Timeout de tecla segurada --------------------- #
+.eqv HELD_TIMEOUT  8    # frames que uma tecla de movimento persiste
+
+# -------------------- Mapa de teclas (ASCII, KDMMIO) ---------------- #
 .eqv KEY_LEFT   97    # 'a'
 .eqv KEY_RIGHT  100   # 'd'
 .eqv KEY_UP     119   # 'w'
@@ -30,78 +32,85 @@
 .eqv KEY_SHOOT  106   # 'j'
 .eqv KEY_SWAP   108   # 'l'
 
+# Movimento = LEFT|RIGHT|DOWN|UP = 0x01|0x02|0x20|0x40 = 0x63
+.eqv MOVE_MASK  0x63
+
 .text
 
-# -------------------------------------------------------------------- #
-#  INPUT_READ                                                          #
-#  Args: nenhum.                                                       #
-#  Efeito: escreve a bitmask das teclas ativas em GS_input_bits.       #
-#  Registradores: usa apenas t0..t4 (caller-saved); nao toca s*.       #
-#  Nao chama outra rotina -> nao precisa salvar ra.                    #
-# -------------------------------------------------------------------- #
 INPUT_READ:
     la   t4, GAME_STATE
 
-    # Zera a mascara deste frame. Se nenhuma tecla for lida, fica 0
-    # (= nada pressionado), que e o comportamento correto.
-    sw   zero, GS_input_bits(t4)
-
-    # 1. Ha alguma tecla disponivel? (bit 0 de KDMMIO_CTRL)
-    li   t0, KDMMIO_CTRL
+    # ---- Ha evento de tecla este frame? (bit 0 do KDMMIO_Ctrl) ----- #
+    li   t0, KDMMIO_Ctrl
     lw   t1, 0(t0)
     andi t1, t1, 1
-    beqz t1, INPUT_READ_END      # sem tecla -> mascara fica 0
+    beqz t1, IR_NO_EVENT
 
-    # 2. Le o valor ASCII da tecla (consome o caractere do buffer)
-    li   t0, KDMMIO_DATA
+    # ---- Le a tecla ASCII e monta a mascara deste frame ------------ #
+    li   t0, KDMMIO_Data
     lw   t2, 0(t0)               # t2 = tecla ASCII
-
-    # 3. Compara com o mapa de teclas e liga o bit correspondente.
-    #    t3 acumula a mascara resultante.
     li   t3, 0
 
     li   t0, KEY_LEFT
-    bne  t2, t0, INPUT_CHK_RIGHT
+    bne  t2, t0, IR_CHK_RIGHT
     ori  t3, t3, INPUT_LEFT
-    j    INPUT_STORE
-
-INPUT_CHK_RIGHT:
+    j    IR_HAVE_MASK
+IR_CHK_RIGHT:
     li   t0, KEY_RIGHT
-    bne  t2, t0, INPUT_CHK_UP
+    bne  t2, t0, IR_CHK_UP
     ori  t3, t3, INPUT_RIGHT
-    j    INPUT_STORE
-
-INPUT_CHK_UP:
+    j    IR_HAVE_MASK
+IR_CHK_UP:
     li   t0, KEY_UP
-    bne  t2, t0, INPUT_CHK_DOWN
+    bne  t2, t0, IR_CHK_DOWN
     ori  t3, t3, INPUT_UP
-    j    INPUT_STORE
-
-INPUT_CHK_DOWN:
+    j    IR_HAVE_MASK
+IR_CHK_DOWN:
     li   t0, KEY_DOWN
-    bne  t2, t0, INPUT_CHK_JUMP
+    bne  t2, t0, IR_CHK_JUMP
     ori  t3, t3, INPUT_DOWN
-    j    INPUT_STORE
-
-INPUT_CHK_JUMP:
+    j    IR_HAVE_MASK
+IR_CHK_JUMP:
     li   t0, KEY_JUMP
-    bne  t2, t0, INPUT_CHK_SHOOT
+    bne  t2, t0, IR_CHK_SHOOT
     ori  t3, t3, INPUT_JUMP
-    j    INPUT_STORE
-
-INPUT_CHK_SHOOT:
+    j    IR_HAVE_MASK
+IR_CHK_SHOOT:
     li   t0, KEY_SHOOT
-    bne  t2, t0, INPUT_CHK_SWAP
+    bne  t2, t0, IR_CHK_SWAP
     ori  t3, t3, INPUT_SHOOT
-    j    INPUT_STORE
-
-INPUT_CHK_SWAP:
+    j    IR_HAVE_MASK
+IR_CHK_SWAP:
     li   t0, KEY_SWAP
-    bne  t2, t0, INPUT_STORE     # tecla nao mapeada -> mascara 0
+    bne  t2, t0, IR_HAVE_MASK
     ori  t3, t3, INPUT_SWAP
 
-INPUT_STORE:
-    sw   t3, GS_input_bits(t4)
+IR_HAVE_MASK:
+    # Parte de MOVIMENTO -> vira held_bits e recarrega o timer.
+    li   t0, MOVE_MASK
+    and  t5, t3, t0
+    beqz t5, IR_STORE            # evento foi acao pura (sem movimento)
+    sw   t5, GS_held_bits(t4)
+    li   t0, HELD_TIMEOUT
+    sw   t0, GS_held_timer(t4)
 
-INPUT_READ_END:
+IR_STORE:
+    # input_bits = mascara deste evento OR movimento ainda segurado.
+    lw   t0, GS_held_bits(t4)
+    or   t3, t3, t0
+    sw   t3, GS_input_bits(t4)
+    ret
+
+    # ---- Sem evento: decai o auto-hold do movimento ---------------- #
+IR_NO_EVENT:
+    lw   t0, GS_held_timer(t4)
+    beqz t0, IR_NO_HOLD
+        addi t0, t0, -1
+        sw   t0, GS_held_timer(t4)
+        lw   t1, GS_held_bits(t4)
+        sw   t1, GS_input_bits(t4)
+        ret
+IR_NO_HOLD:
+    sw   zero, GS_held_bits(t4)
+    sw   zero, GS_input_bits(t4)
     ret

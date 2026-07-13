@@ -9,18 +9,10 @@
 
 .data
 
-# -------------------- Endereco de hardware do bitmap ---------------- #
-# Registrador que seleciona qual frame (0/1) o bitmap display mostra.
-# Definido aqui para NAO depender do MACROSv24.s (que traz codigo de
-# setup de excecao no inicio do .text e nao e necessario neste projeto).
-.eqv BITMAP_FRAME_SELECT  0xFF200604
-
-# -------------------- Enderecos do teclado (KDMMIO) ----------------- #
-# Mesmo esquema: definidos localmente para nao depender do MACROSv24.s.
-#   KDMMIO_CTRL: bit 0 = 1 quando ha tecla disponivel para ler.
-#   KDMMIO_DATA: valor ASCII da tecla (ler consome o caractere).
-.eqv KDMMIO_CTRL  0xFF200000
-.eqv KDMMIO_DATA  0xFF200004
+# -------------------- Enderecos de hardware ------------------------- #
+# Os enderecos de MMIO (bitmap frame select, teclado) vem do MACROSv24.s
+# (VGAFRAMESELECT, KDMMIO_Ctrl/Data, Buffer0Teclado). Nao redefinimos
+# aqui para evitar duplicacao.
 
 # Double buffering: o bitmap tem 2 frames (0 e 1). So compensa alternar
 # entre eles quando TODO o conteudo e redesenhado a cada frame no frame
@@ -50,17 +42,19 @@
 .eqv DIR_RIGHT  0
 .eqv DIR_LEFT   1
 
-# -------------------- Constantes de fisica -------------------------- #
-# Valores inteiros em pixels/frame. Ajuste fino depois de ver na tela.
-.eqv PLAYER_SPEED     2    # velocidade horizontal (px por frame)
-.eqv PLAYER_JUMP_VY  -8    # impulso inicial do pulo (negativo = pra cima)
-.eqv GRAVITY          1    # aceleracao da gravidade (px/frame por frame)
-.eqv MAX_FALL_VY      10   # velocidade terminal de queda (limita vy)
+# -------------------- Constantes de fisica (float) ------------------ #
+# Valores em pixels/frame. Carregados com flw pelo player.s.
+# Ajuste fino depois de ver na tela; a etapa 2 (pulo player-friendly)
+# so mexe nestes numeros e na logica do player.s -- a engine nao muda.
+PHYS_ACCEL:    .float 0.5    # aceleracao horizontal ao andar (px/frame^2)
+PHYS_GRAVITY:  .float 0.6    # aceleracao da gravidade (ay quando no ar)
+PHYS_JUMP_VY:  .float -9.0   # velocidade vertical inicial do pulo (pra cima)
+PHYS_FRICTION: .float 0.5    # desaceleracao horizontal quando sem input
+PHYS_ZERO:     .float 0.0
 
-# Chao provisorio (Y em pixels na tela) enquanto COLLISION_UPDATE nao
-# existe. So evita queda infinita para dar pra ver o pulo funcionando.
-# Quando a colisao com tiles estiver pronta, REMOVA este uso em player.s.
-.eqv TEMP_GROUND_Y   160  # Y do "chao" de teste (bordo inferior do player)
+# Chao provisorio (Y em pixels) enquanto COLLISION_UPDATE nao existe.
+# So evita queda infinita. REMOVER quando a colisao com tiles existir.
+PHYS_GROUND_Y: .float 160.0
 
 # ==================================================================== #
 #  GAME_STATE  --  estado geral, uma instancia                         #
@@ -68,9 +62,12 @@
 .eqv GS_scene       0   # word: cena atual (SCENE_*)
 .eqv GS_frame       4   # word: frame do bitmap (0 ou 1), alterna todo loop
 .eqv GS_frame_time  8   # word: tempo (ms) do inicio do frame anterior
-.eqv GS_input_bits  12  # word: bitmask das teclas pressionadas neste frame
-.eqv GS_input_prev  16  # word: bitmask do frame anterior (p/ detectar "acabou de apertar")
-.eqv GS_tick        20  # word: contador de frames desde o boot (p/ animacoes/timers)
+.eqv GS_input_bits  12  # word: ESTADO das teclas (bit ligado = pressionada)
+.eqv GS_input_prev  16  # word: input_bits do frame anterior (borda de subida)
+.eqv GS_tick        20  # word: contador de frames desde o boot
+.eqv GS_kbd_prev    24  # word: buffer anterior (usado pela versao SCANCODE/DE2)
+.eqv GS_held_bits   28  # word: teclas de movimento seguradas (versao KDMMIO/PC)
+.eqv GS_held_timer  32  # word: frames restantes do auto-hold (versao KDMMIO/PC)
 
 GAME_STATE:
     .word SCENE_GAME    # GS_scene
@@ -79,45 +76,69 @@ GAME_STATE:
     .word 0             # GS_input_bits
     .word 0             # GS_input_prev
     .word 0             # GS_tick
+    .word 0             # GS_kbd_prev
+    .word 0             # GS_held_bits
+    .word 0             # GS_held_timer
 
 # ==================================================================== #
-#  PLAYER  --  estado do Mega Man, uma instancia                       #
-#  Posicao guardada em coordenadas de MATRIZ (tile) + offset em pixel, #
-#  no mesmo esquema que MAP_INFO ja usa no data.s original.            #
+#  COMPONENTE DE FISICA (layout compartilhado por TODAS as entidades)  #
+#                                                                      #
+#  A engine PHYSICS_STEP opera sobre estes offsets, recebendo o        #
+#  ponteiro de uma entidade. Player, inimigos e projeteis DEVEM comecar#
+#  seu struct com este bloco nestes mesmos offsets, para que a mesma   #
+#  engine sirva a todos (padrao component/system).                     #
+#                                                                      #
+#  Tudo em float IEEE-754 (RV32F). A posicao float e a FONTE DE VERDADE;#
+#  o pixel de render e projetado dela por fcvt.w.s a cada frame, nunca #
+#  mantido em paralelo -> sem realimentar erro de arredondamento.      #
+#                                                                      #
+#    [0]  x   : posicao X (float, em pixels)                           #
+#    [4]  y   : posicao Y (float, em pixels)                           #
+#    [8]  vx  : velocidade X (float, px/frame)                         #
+#    [12] vy  : velocidade Y (float, px/frame)                         #
+#    [16] ax  : aceleracao X (float, px/frame^2)                       #
+#    [20] ay  : aceleracao Y (float, px/frame^2)  <- gravidade vai aqui#
+#    [24] vx_max : |velocidade X| maxima (float, clamp simetrico)      #
+#    [28] vy_max : |velocidade Y| maxima (float, clamp simetrico)      #
 # ==================================================================== #
-.eqv PLAYER_mat_x     0   # word: X na matriz do mapa (em tiles)
-.eqv PLAYER_mat_y     4   # word: Y na matriz do mapa (em tiles)
-.eqv PLAYER_off_x     8   # word: offset X em pixels dentro do tile (0..15)
-.eqv PLAYER_off_y     12  # word: offset Y em pixels dentro do tile (0..15)
-.eqv PLAYER_scr_x     16  # word: X na TELA em pixels (onde desenhar)
-.eqv PLAYER_scr_y     20  # word: Y na TELA em pixels (onde desenhar)
-.eqv PLAYER_dir       24  # word: DIR_RIGHT / DIR_LEFT
-.eqv PLAYER_status    28  # word: indice de sprite/animacao (frame da anim)
-.eqv PLAYER_on_ground 32  # word: 1 se pisando em tile solido, 0 se no ar
-.eqv PLAYER_health    36  # word: pontos de vida atuais
-.eqv PLAYER_max_hp    40  # word: vida maxima
-.eqv PLAYER_ability   44  # word: habilidade/arma ativa (0 = Buster, 1.. = outras)
-.eqv PLAYER_vy        48  # word: velocidade vertical em ponto fixo (ver nota)
-.eqv PLAYER_invuln    52  # word: frames restantes de invulnerabilidade (i-frames)
+.eqv PH_x       0
+.eqv PH_y       4
+.eqv PH_vx      8
+.eqv PH_vy      12
+.eqv PH_ax      16
+.eqv PH_ay      20
+.eqv PH_vx_max  24
+.eqv PH_vy_max  28
+.eqv PH_SIZE    32   # tamanho do bloco de fisica (bytes)
 
-# NOTA sobre vy: comecar em INTEIRO (px/frame) para simplicidade. Se a fisica
-# precisar de precisao (pulo suave), migrar para float (fs*) como o Metroid fez
-# na fisica da Samus/Ridley -- mas so quando o pulo inteiro nao bastar.
+# -------------------- Struct PLAYER --------------------------------- #
+# Comeca com o bloco de fisica (offsets PH_*), depois campos proprios  #
+# do jogador (offsets a partir de PH_SIZE).                            #
+.eqv PLAYER_dir       32  # word: DIR_RIGHT / DIR_LEFT
+.eqv PLAYER_status    36  # word: indice de sprite/animacao (frame)
+.eqv PLAYER_on_ground 40  # word: 1 se pisando em tile solido, 0 se no ar
+.eqv PLAYER_health    44  # word: pontos de vida atuais
+.eqv PLAYER_max_hp    48  # word: vida maxima
+.eqv PLAYER_ability   52  # word: habilidade/arma ativa (0 = Buster)
+.eqv PLAYER_invuln    56  # word: frames restantes de i-frames
 
 PLAYER:
-    .word 5             # PLAYER_mat_x   (posicao inicial de exemplo)
-    .word 10            # PLAYER_mat_y
-    .word 0             # PLAYER_off_x
-    .word 0             # PLAYER_off_y
-    .word 80            # PLAYER_scr_x   (px na tela)
-    .word 160           # PLAYER_scr_y
+    # --- bloco de fisica (float) --- #
+    .float 80.0         # PH_x   (posicao inicial X, pixels)
+    .float 160.0        # PH_y   (posicao inicial Y, pixels)
+    .float 0.0          # PH_vx
+    .float 0.0          # PH_vy
+    .float 0.0          # PH_ax
+    .float 0.0          # PH_ay   (o player.s escreve gravidade aqui)
+    .float 3.0          # PH_vx_max (px/frame horizontal)
+    .float 12.0         # PH_vy_max (px/frame vertical, cobre queda rapida)
+    # --- campos do jogador --- #
     .word DIR_RIGHT     # PLAYER_dir
     .word 0             # PLAYER_status
     .word 0             # PLAYER_on_ground
     .word 28            # PLAYER_health
     .word 28            # PLAYER_max_hp
-    .word 0             # PLAYER_ability (0 = Mega Buster)
-    .word 0             # PLAYER_vy
+    .word 0             # PLAYER_ability
     .word 0             # PLAYER_invuln
 
 # ==================================================================== #

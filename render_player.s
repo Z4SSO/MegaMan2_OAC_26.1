@@ -34,13 +34,19 @@ RENDER_PLAYER:
     la   t0, PLAYER
 
     la   a0, PLAYER_SPRITE       # endereco da sprite (placeholder)
-    lw   a1, PLAYER_scr_x(t0)    # X na tela
-    lw   a2, PLAYER_scr_y(t0)    # Y na tela
+
+    # Posicao de render: projetada da posicao float (fonte de verdade)
+    # por fcvt.w.s, recalculada a cada frame -> nunca realimenta erro.
+    flw   ft0, PH_x(t0)
+    fcvt.w.s a1, ft0             # a1 = (int) x  -> X na tela
+    flw   ft1, PH_y(t0)
+    fcvt.w.s a2, ft1             # a2 = (int) y  -> Y na tela
+
     li   a3, PLAYER_W            # largura (16)
     li   a4, PLAYER_H            # altura (16)
 
     la   t1, GAME_STATE
-    lw   a5, GS_frame(t1)        # frame de destino (0 enquanto DB off)
+    lw   a5, GS_frame(t1)        # frame de destino
 
     lw   a6, PLAYER_status(t0)   # status/frame de animacao
     li   a7, 0                   # print normal (nao cropped)
