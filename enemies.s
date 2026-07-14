@@ -132,18 +132,20 @@ EU_LOOP:
     fabs.s ft6, ft2            # |dx|
     fabs.s ft7, ft5            # |dy|
 
-    # ---- Visibilidade: o CENTRO do inimigo esta na tela? ---------- #
-    # Testar o centro (x + EN_W/2, y + EN_H/2) em vez do canto faz o
-    # inimigo so congelar quando a MAIORIA do corpo saiu -- um pixel na
-    # borda nao para mais o spotted. (hoje tp=0 => mundo == tela.)
-    fcvt.w.s t2, ft0           # enemy.x (canto, int)
+    # ---- Visibilidade: o CENTRO do inimigo esta na TELA (camera)? -- #
+    # Converte mundo -> tela subtraindo GS_cam_x; assim "visivel" segue
+    # a janela da camera, nao os 320px fixos do inicio do mundo.
+    fcvt.w.s t2, ft0           # enemy.x MUNDO (canto, int)
     li   t4, EN_W
     srli t4, t4, 1             # EN_W/2
-    add  t2, t2, t4            # centro X
+    add  t2, t2, t4            # centro X (mundo)
+    la   t3, GAME_STATE
+    lw   t5, GS_cam_x(t3)
+    sub  t2, t2, t5            # centro X na TELA (mundo - cam_x)
     li   t3, SCREEN_LEFT
-    blt  t2, t3, EU_SET_IDLE   # centro fora pela esquerda
+    blt  t2, t3, EU_SET_IDLE   # centro fora pela esquerda da camera
     li   t3, SCREEN_RIGHT
-    bge  t2, t3, EU_SET_IDLE   # centro fora pela direita
+    bge  t2, t3, EU_SET_IDLE   # centro fora pela direita da camera
     fcvt.w.s t2, ft3           # enemy.y (canto, int)
     li   t4, EN_H
     srli t4, t4, 1             # EN_H/2

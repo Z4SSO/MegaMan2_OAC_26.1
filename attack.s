@@ -108,10 +108,15 @@ AU_ADV_LOOP:
     add  t4, t4, t5               # X += vx
     sw   t4, PR_x(t0)
 
-    # Cull: fora da tela (X < 0 ou X >= 320) -> libera slot
-    bltz t4, AU_ADV_FREE          # X < 0
-    li   t5, 320
-    bge  t4, t5, AU_ADV_FREE      # X >= 320
+    # Cull: fora da JANELA DA CAMERA (com folga de 16px) -> libera slot.
+    # (antes comparava com [0,320) de mundo -- errado com scroll)
+    la   t5, GAME_STATE
+    lw   t5, GS_cam_x(t5)
+    sub  t4, t4, t5               # X na tela = mundo - cam_x
+    li   t5, -16
+    blt  t4, t5, AU_ADV_FREE      # bem fora pela esquerda
+    li   t5, 336                  # 320 + folga
+    bge  t4, t5, AU_ADV_FREE      # bem fora pela direita
     j    AU_ADV_NEXT
 
 AU_ADV_FREE:

@@ -43,6 +43,13 @@ RENDER_PLAYER:
     la    t2, GAME_STATE
     lw    t3, GS_cam_x(t2)
     sub   a1, a1, t3            # a1 = X na tela (player fica centralizado)
+    # CULL de seguranca: se o player sair da janela (ex.: andar alem da
+    # borda do mapa com a camera travada), nao desenha -- RENDER_SPRITE
+    # sem crop faria wrap de linha (lixo). Clamp do X de mundo do player
+    # e a solucao definitiva (pendente).
+    bltz  a1, RP_SKIP
+    li    t3, 288               # 320 - PLAYER_W(32)
+    bgt   a1, t3, RP_SKIP
     flw   ft1, PH_y(t0)
     fcvt.w.s a2, ft1            # a2 = (int) y (sem scroll vertical)
 
@@ -57,6 +64,7 @@ RENDER_PLAYER:
 
     call RENDER_SPRITE           # rotina standalone (render_sprite.s)
 
+RP_SKIP:
     lw   ra, 0(sp)
     addi sp, sp, 4
     ret

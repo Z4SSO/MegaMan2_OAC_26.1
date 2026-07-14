@@ -39,6 +39,12 @@ RE_LOOP:
     la   t0, GAME_STATE
     lw   t1, GS_cam_x(t0)
     sub  a1, a1, t1              # X de tela = mundo - cam_x
+    # CULL: RENDER_SPRITE nao faz crop de borda -- desenhar parcialmente
+    # fora (X<0 ou X+W>320) "da a volta" na linha do framebuffer e vira
+    # colunas de lixo. Sprite que nao cabe INTEIRO na tela nao desenha.
+    bltz a1, RE_NEXT             # saiu pela esquerda
+    li   t2, 312                 # 320 - PROJ_W(8)
+    bgt  a1, t2, RE_NEXT         # saiu pela direita
     lw   a2, PR_y(s0)             # Y na tela (sem scroll vertical)
     li   a3, PROJ_W               # largura (8)
     li   a4, PROJ_H               # altura (8)
@@ -80,6 +86,12 @@ RE_EN_DRAW:
     la   t0, GAME_STATE
     lw   t1, GS_cam_x(t0)
     sub  a1, a1, t1            # X de tela = mundo - cam_x
+    # CULL: sem crop de borda no RENDER_SPRITE, sprite parcialmente fora
+    # (X<0 ou X+W>320) faz wrap de linha = lixo nas bordas. Nao desenha.
+    bltz a1, RE_EN_NEXT        # saiu pela esquerda
+    li   t2, 320
+    sub  t2, t2, a3            # t2 = 320 - largura do sprite
+    bgt  a1, t2, RE_EN_NEXT    # saiu pela direita
     flw  ft0, PH_y(s0)
     fcvt.w.s a2, ft0            # Y (sem scroll vertical)
     lw   a5, GS_frame(t0)       # frame destino (double buffering)

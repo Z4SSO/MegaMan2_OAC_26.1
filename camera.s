@@ -44,6 +44,11 @@ CAM_CHK_MAX:
     mv   t1, t2                # travou na borda direita
 
 CAM_STORE:
+    # Quantiza p/ PAR: crop com largura impar quebra o RENDER_COLOR em
+    # modo half (sh = 2px/vez estoura 1px/linha e deriva na diagonal --
+    # o "lixo em escadinha" nas bordas). Com cam_x par, todo offset de
+    # crop (cam_x % 16) e par e as larguras fecham certinho.
+    andi t1, t1, -2            # limpa o bit 0 (arredonda p/ baixo, par)
     la   t0, GAME_STATE
     sw   t1, GS_cam_x(t0)      # publica a posicao da camera
     ret
