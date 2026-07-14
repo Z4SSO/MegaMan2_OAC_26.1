@@ -200,7 +200,7 @@ RENDER_MAP_LOOP:
 	mv t4,zero		# default sprite status
 	beqz t1,RENDER_MAP_SaveRegisters
 	slli t0,t1,8		# each tile sprite has 16 x 16 = 256 bytes
-	la t4,Tileset
+	la t4,Tileset_W1
 	add t0,t4,t0		# t0 = address of tile sprite
 	mv t4,zero		# tiles use sprite status 0
 

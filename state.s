@@ -64,7 +64,7 @@ PHYS_ZERO:     .float 0.0
 
 # Chao provisorio (Y em pixels) enquanto COLLISION_UPDATE nao existe.
 # So evita queda infinita. REMOVER quando a colisao com tiles existir.
-PHYS_GROUND_Y: .float 160.0
+PHYS_GROUND_Y: .float 144.0
 
 # --- Aceleracao/frenagem dos inimigos (modelo igual ao do player:
 #     acelera na direcao do alvo, freia quando sem alvo). Valores baixos
@@ -90,6 +90,11 @@ EN_BRAKE:      .float 0.12   # desaceleracao aplicada quando IDLE (freio)
                         #   Se != GS_music_id, o MUSIC_SELECT re-arma. Comeca MUS_NONE.
 .eqv GS_music_cur   44  # word: ponteiro p/ a tabela <SONG> da musica armada.
                         #   0 = nenhuma; o MUSIC_LOOP nao toca nada enquanto 0.
+# ---- Camera / scroll ----------------------------------------------- #
+.eqv GS_cam_x       48  # word: posicao X da camera em PIXELS de mundo.
+                        #   O mapa e as entidades sao desenhados deslocados
+                        #   de -cam_x. Calculado por CAMERA_UPDATE p/ manter
+                        #   o player no centro, travando nas bordas do mapa.
 
 GAME_STATE:
     .word SCENE_GAME    # GS_scene
@@ -104,6 +109,7 @@ GAME_STATE:
     .word MUS_INICIO    # GS_music_id    (comeca pedindo a musica do menu)
     .word MUS_NONE      # GS_music_armed (nada armado -> forca o 1o arme)
     .word 0             # GS_music_cur   (ponteiro nulo ate o 1o MUSIC_SELECT)
+    .word 0             # GS_cam_x       (camera comeca em 0 = borda esquerda)
 
 # ==================================================================== #
 #  COMPONENTE DE FISICA (layout compartilhado por TODAS as entidades)  #
@@ -150,7 +156,7 @@ GAME_STATE:
 PLAYER:
     # --- bloco de fisica (float) --- #
     .float 80.0         # PH_x   (posicao inicial X, pixels)
-    .float 160.0        # PH_y   (posicao inicial Y, pixels)
+    .float 144.0        # PH_y   (posicao inicial Y, pixels -- pe no chao WORLD1)
     .float 0.0          # PH_vx
     .float 0.0          # PH_vy
     .float 0.0          # PH_ax
@@ -175,8 +181,8 @@ PLAYER:
 #  real: basta trocar este bloco por .byte's do personagem (mesmo      #
 #  tamanho) ou apontar PLAYER_SPRITE para o novo .data.                #
 # ==================================================================== #
-.eqv PLAYER_W  16
-.eqv PLAYER_H  16
+.eqv PLAYER_W  32
+.eqv PLAYER_H  48
 PLAYER_SPRITE:
     .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
     .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
@@ -290,8 +296,15 @@ BUSTER_SPRITE:
 .eqv EN_RUNNER_VMAX    2    # velocidade maxima horizontal do corredor
 .eqv EN_VYMAX_FALL    12    # teto de queda (vy_max) p/ o corredor cair
 .eqv EN_VYMAX_FLY      2    # teto vertical do voador (voo suave em Y)
-.eqv EN_W             16     # largura do sprite de inimigo
-.eqv EN_H             16     # altura do sprite de inimigo
+.eqv EN_FLYER_W       32     # voador (EN2) 32x32
+.eqv EN_FLYER_H       32
+.eqv EN_RUNNER_W      32     # corredor (EN1) 32x48
+.eqv EN_RUNNER_H      48
+# EN_W/EN_H genericos (usados na checagem de visibilidade pelo centro).
+# Uso o menor (32x32) como caixa de referencia -- aproximacao boa o
+# suficiente p/ "maioria na tela". Colisao real vem no Bloco 4.
+.eqv EN_W             32
+.eqv EN_H             32
 # Visibilidade usa o CENTRO do inimigo (x+EN_W/2, y+EN_H/2) contra os
 # limites SCREEN_* -> ele so perde o spotted quando a maioria do corpo
 # saiu da tela. Ver a checagem em enemies.s (EU_LOOP).
@@ -304,6 +317,12 @@ BUSTER_SPRITE:
 .eqv SCREEN_RIGHT   320
 .eqv SCREEN_TOP     0
 .eqv SCREEN_BOT     240
+# --- Camera: constantes de scroll horizontal ------------------------ #
+.eqv SCREEN_W_PX    320   # largura da tela em pixels
+.eqv CAM_MARGIN     144   # SCREEN_W_PX/2 - PLAYER_W/2 = 160 - 16 = 144
+                          #   -> desloc. p/ manter o player centralizado.
+.eqv CAM_MAX_X      2080  # limite direito: map_w(150)*16 - 320 = 2080.
+                          #   (recalcular se a largura do mapa mudar!)
 
 .data
 .align 2

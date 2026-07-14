@@ -35,12 +35,14 @@ RE_LOOP:
 
     # Monta argumentos do RENDER_SPRITE p/ este tiro
     la   a0, BUSTER_SPRITE        # sprite do projetil
-    lw   a1, PR_x(s0)             # X na tela
-    lw   a2, PR_y(s0)             # Y na tela
+    lw   a1, PR_x(s0)             # X de MUNDO
+    la   t0, GAME_STATE
+    lw   t1, GS_cam_x(t0)
+    sub  a1, a1, t1              # X de tela = mundo - cam_x
+    lw   a2, PR_y(s0)             # Y na tela (sem scroll vertical)
     li   a3, PROJ_W               # largura (8)
     li   a4, PROJ_H               # altura (8)
 
-    la   t0, GAME_STATE
     lw   a5, GS_frame(t0)         # frame de destino (double buffering)
     li   a6, 0                    # status 0 (1 frame de animacao)
     li   a7, 0                    # print normal (nao cropped)
@@ -59,22 +61,27 @@ RE_EN_LOOP:
     lw   t0, EN_active(s0)
     beqz t0, RE_EN_NEXT
 
-    # escolhe o sprite pelo tipo
+    # escolhe o sprite E as dimensoes pelo tipo (voador e corredor tem
+    # tamanhos diferentes: EN2=32x32, EN1=32x48).
     lw   t0, EN_type(s0)
     li   t1, ENT_FLYER
     bne  t0, t1, RE_EN_RUNNER
-    la   a0, FLYER_SPRITE
+    la   a0, EN2_IDLE          # voador (caveira) 32x32
+    li   a3, EN_FLYER_W
+    li   a4, EN_FLYER_H
     j    RE_EN_DRAW
 RE_EN_RUNNER:
-    la   a0, RUNNER_SPRITE
+    la   a0, EN1_IDLE          # corredor (camera) 32x48
+    li   a3, EN_RUNNER_W
+    li   a4, EN_RUNNER_H
 RE_EN_DRAW:
     flw  ft0, PH_x(s0)
-    fcvt.w.s a1, ft0            # X (float -> int)
-    flw  ft0, PH_y(s0)
-    fcvt.w.s a2, ft0            # Y
-    li   a3, EN_W
-    li   a4, EN_H
+    fcvt.w.s a1, ft0            # X de MUNDO (float -> int)
     la   t0, GAME_STATE
+    lw   t1, GS_cam_x(t0)
+    sub  a1, a1, t1            # X de tela = mundo - cam_x
+    flw  ft0, PH_y(s0)
+    fcvt.w.s a2, ft0            # Y (sem scroll vertical)
     lw   a5, GS_frame(t0)       # frame destino (double buffering)
     li   a6, 0
     li   a7, 0

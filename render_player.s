@@ -33,17 +33,21 @@ RENDER_PLAYER:
 
     la   t0, PLAYER
 
-    la   a0, PLAYER_SPRITE       # endereco da sprite (placeholder)
+    la   a0, PLAYER_IDLE         # sprite real do personagem (32x48, arte do grupo)
 
     # Posicao de render: projetada da posicao float (fonte de verdade)
     # por fcvt.w.s, recalculada a cada frame -> nunca realimenta erro.
     flw   ft0, PH_x(t0)
-    fcvt.w.s a1, ft0             # a1 = (int) x  -> X na tela
+    fcvt.w.s a1, ft0             # a1 = (int) x de MUNDO
+    # converte mundo->tela: X_tela = X_mundo - cam_x
+    la    t2, GAME_STATE
+    lw    t3, GS_cam_x(t2)
+    sub   a1, a1, t3            # a1 = X na tela (player fica centralizado)
     flw   ft1, PH_y(t0)
-    fcvt.w.s a2, ft1             # a2 = (int) y  -> Y na tela
+    fcvt.w.s a2, ft1            # a2 = (int) y (sem scroll vertical)
 
-    li   a3, PLAYER_W            # largura (16)
-    li   a4, PLAYER_H            # altura (16)
+    li   a3, PLAYER_W            # largura real (32)
+    li   a4, PLAYER_H            # altura real (48)
 
     la   t1, GAME_STATE
     lw   a5, GS_frame(t1)        # frame de destino

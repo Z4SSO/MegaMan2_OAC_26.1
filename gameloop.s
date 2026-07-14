@@ -62,6 +62,7 @@ GAME_LOOP:
 # ==================================================================== #
 #  RENDER -- ordem importa (fundo primeiro, HUD por ultimo)            #
 # ==================================================================== #
+    call CAMERA_UPDATE     # 8b. atualiza scroll (player centralizado, trava bordas)
     call RENDER_MAP_FRAME  # 9.  mapa + scroll (apaga rastro) - ver stub abaixo
     call RENDER_ENTITIES   # 10. inimigos, projeteis, itens
     call RENDER_PLAYER     # 11. Mega Man por cima das entidades

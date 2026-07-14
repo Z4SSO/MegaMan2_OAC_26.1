@@ -28,20 +28,23 @@ RENDER_MAP_FRAME:
     la   t0, CURRENT_MAP     # base do mapa atual
     lw   a0, 0(t0)           # a0 = endereco do mapa (setado pelo SETUP)
 
-    lbu  a1, 6(t0)           # X inicial na matriz (top-left)
-    lbu  a2, 7(t0)           # Y inicial na matriz (top-left)
-    lbu  a3, 8(t0)           # offset X no mapa
-    lbu  a4, 9(t0)           # offset Y no mapa
+    # ---- Scroll: converte GS_cam_x (pixels) em coluna + offset ------ #
+    # coluna inicial na matriz = cam_x / 16 ; offset sub-tile = cam_x%16
+    la   t1, GAME_STATE
+    lw   t0, GS_cam_x(t1)    # t0 = cam_x (pixels de mundo)
+    srli a1, t0, 4           # a1 = coluna inicial na matriz (cam_x / 16)
+    andi a3, t0, 15          # a3 = offset X sub-tile (cam_x % 16) -> scroll fino
+    li   a2, 0               # Y inicial na matriz (sem scroll vertical)
+    li   a4, 0               # offset Y sub-tile (0)
 
     # Frame de destino: le GS_frame (0 enquanto double buffering off).
-    la   t1, GAME_STATE
     lw   a5, GS_frame(t1)    # a5 = frame onde desenhar
 
     li   a6, m_screen_width  # largura da tela em tiles (20)
     li   a7, m_screen_height # altura da tela em tiles (15)
-    li   t3, 0               # X inicial de render (matriz)
-    li   t2, 0               # Y inicial de render (matriz)
-    li   tp, 0               # mapa nao deslocado (scroll = 0 por ora)
+    li   t3, 0               # X inicial de render (tela, matriz)
+    li   t2, 0               # Y inicial de render (tela, matriz)
+    li   tp, 0               # tp fica 0: o deslocamento fino vai em a3
 
     call RENDER_MAP
 

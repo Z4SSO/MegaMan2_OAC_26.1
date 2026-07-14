@@ -24,6 +24,7 @@
 # ---- 2. Dados (.data) ---------------------------------------------- #
 .include "data.s"       # tiles, mapas, MAP_INFO/NEXT_MAP (motor base)
 .include "state.s"      # GAME_STATE e PLAYER (structs de estado)
+.include "sprites.s"    # sprites reais do grupo (player + inimigos)
 
 # ---- Codigo (.text): o setup do MACROS cai aqui, no main ----------- #
 .text
@@ -53,6 +54,7 @@ main:
 .include "physics.s"           # PHYSICS_STEP (engine de fisica float)
 .include "player.s"            # PLAYER_UPDATE (intencao + chama engine)
 .include "render_map_frame.s"  # RENDER_MAP_FRAME (redesenho do mapa por frame)
+.include "camera.s"            # CAMERA_UPDATE (scroll horizontal, req 9)
 .include "render_player.s"     # RENDER_PLAYER (desenha o personagem)
 .include "render_sprite.s"     # RENDER_SPRITE (desenho de sprite individual)
 .include "attack.s"            # ATTACK_UPDATE (tiros do Buster, req 2)

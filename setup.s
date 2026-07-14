@@ -36,7 +36,7 @@ SETUP:
 
 
     MAP1_SETUP:
-        la a0, Map1 	# Map Address     
+        la a0, Map_W1 	# Map Address     
         la t0, CURRENT_MAP # Loads CURRENT_MAP address
         sw a0, 0(t0)    # Stores Map1 address on CURRENT_MAP
         
