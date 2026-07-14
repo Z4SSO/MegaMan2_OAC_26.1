@@ -70,7 +70,8 @@ GAME_LOOP:
 # ==================================================================== #
 #  AUDIO                                                               #
 # ==================================================================== #
-    call MUSIC_LOOP        # 13. avanca a musica (JA EXISTE)
+    call MUSIC_SELECT      # 12b. escolhe a musica pela cena/estado (re-arma se mudou)
+    call MUSIC_LOOP        # 13. avanca a musica armada
     call SFX_UPDATE        # 14. efeitos sonoros pendentes
 
 # ==================================================================== #
@@ -114,13 +115,8 @@ ABILITY_UPDATE:
     ret
 
 # -------------------------------------------------------------------- #
-#  ATTACK_UPDATE                                                       #
-#  Spawna um projetil na borda de INPUT_SHOOT e avanca os projeteis    #
-#  ativos. Req 2 (ataque base) e parte do req 4.                       #
-#  TODO: pool de projeteis; spawn na frente do player conforme dir.    #
+#  ATTACK_UPDATE  -> implementado em attack.s                          #
 # -------------------------------------------------------------------- #
-ATTACK_UPDATE:
-    ret
 
 # -------------------------------------------------------------------- #
 #  ENEMY_UPDATE                                                        #
@@ -154,12 +150,8 @@ DOOR_UPDATE:
 # -------------------------------------------------------------------- #
 #  RENDER_MAP_FRAME                                                    #
 # -------------------------------------------------------------------- #
-#  RENDER_ENTITIES                                                     #
-#  Desenha inimigos, projeteis e itens (chama RENDER_WORD por sprite). #
-#  TODO: iterar pools; usar RENDER_WORD com status p/ animacao.        #
+#  RENDER_ENTITIES  -> implementado em render_entities.s               #
 # -------------------------------------------------------------------- #
-RENDER_ENTITIES:
-    ret
 
 # -------------------------------------------------------------------- #
 #  RENDER_HUD                                                          #
