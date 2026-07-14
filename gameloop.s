@@ -124,9 +124,7 @@ ABILITY_UPDATE:
 #  Modelo: Ripper (anda/inverte), Zoomer (2 eixos), Chefao (RNG).      #
 #  TODO: iterar pool de inimigos; despachar por tipo p/ sua FSM.       #
 # -------------------------------------------------------------------- #
-ENEMY_UPDATE:
-    ret
-
+# ENEMY_UPDATE -> implementado em enemies.s
 # -------------------------------------------------------------------- #
 #  COLLISION_UPDATE                                                    #
 #  Resolve colisoes: player<->tiles solidos, player<->inimigo,         #

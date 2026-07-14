@@ -66,6 +66,11 @@ PHYS_ZERO:     .float 0.0
 # So evita queda infinita. REMOVER quando a colisao com tiles existir.
 PHYS_GROUND_Y: .float 160.0
 
+# --- Aceleracao/frenagem dos inimigos (modelo igual ao do player:
+#     acelera na direcao do alvo, freia quando sem alvo). Valores baixos
+#     = mais inercia = reversao mais lenta e natural ao pular por cima. ---
+EN_ACCEL:      .float 0.15   # aceleracao horizontal/voo dos inimigos (px/frame^2)
+EN_BRAKE:      .float 0.12   # desaceleracao aplicada quando IDLE (freio)
 # ==================================================================== #
 #  GAME_STATE  --  estado geral, uma instancia                         #
 # ==================================================================== #
@@ -238,3 +243,110 @@ BUSTER_SPRITE:
     .byte 40,40,40,40,40,40,40,40
     .byte  0,40,40,40,40,40,40, 0
     .byte  0, 0,40,40,40,40, 0, 0
+
+# ==================================================================== #
+#  ENEMY POOL  --  inimigos (req 8: >=3 tipos c/ IAs diferentes)       #
+#  ------------------------------------------------------------------  #
+#  Pool fixo de EN_MAX slots. Cada slot COMECA com o bloco de fisica   #
+#  PH_* (32 bytes) para poder ser passado direto ao PHYSICS_STEP -- o  #
+#  inimigo CORREDOR reusa a gravidade/integracao do player. O VOADOR   #
+#  ignora PH_ax/ay e escreve PH_vx/vy direto (voo livre em X e Y).     #
+#                                                                      #
+#  Depois do bloco PH_* vem os campos proprios do inimigo:             #
+#    EN_active   32  : 0 = slot livre, 1 = vivo                        #
+#    EN_type     36  : ENT_FLYER / ENT_RUNNER                          #
+#    EN_fsm      40  : ENF_IDLE / ENF_SPOTTED (estado da IA)           #
+#    EN_hp       44  : pontos de vida                                  #
+#    EN_dir      48  : DIR_RIGHT / DIR_LEFT (p/ espelhar sprite)       #
+#    EN_anim     52  : contador de frames p/ animacao                  #
+#  EN_STRIDE = 56 bytes por slot (32 fisica + 24 proprios).            #
+# ==================================================================== #
+.eqv EN_MAX      8
+.eqv EN_STRIDE   56
+# --- campos proprios (offset a partir do inicio do slot) --- #
+.eqv EN_active   32
+.eqv EN_type     36
+.eqv EN_fsm      40
+.eqv EN_hp       44
+.eqv EN_dir      48
+.eqv EN_anim     52
+
+# --- tipos de inimigo --- #
+.eqv ENT_FLYER   0   # voador (caveira): persegue em X e Y
+.eqv ENT_RUNNER  1   # corredor (camera): persegue so em X, preso ao chao
+
+# --- estados da FSM --- #
+.eqv ENF_IDLE     0  # parado (nao avistou o player)
+.eqv ENF_SPOTTED  1  # avistou: persegue
+
+# --- parametros de comportamento --- #
+.eqv EN_SIGHT_RADIUS  120   # raio (px) de deteccao do player p/ virar SPOTTED
+# --- Movimento por ACELERACAO: a IA escreve PH_ax/ay (via EN_ACCEL/
+#     EN_BRAKE, floats la em cima) e a engine integra vx/vy com clamp em
+#     vx_max/vy_max. Isso da INERCIA: ao pular por cima, o inimigo
+#     desacelera, para e so entao inverte -- nao troca de direcao
+#     instantaneamente. Os VMAX abaixo viram PH_vx_max/PH_vy_max. ---
+.eqv EN_FLYER_VMAX     2    # velocidade maxima do voador (px/frame por eixo)
+.eqv EN_RUNNER_VMAX    2    # velocidade maxima horizontal do corredor
+.eqv EN_VYMAX_FALL    12    # teto de queda (vy_max) p/ o corredor cair
+.eqv EN_VYMAX_FLY      2    # teto vertical do voador (voo suave em Y)
+.eqv EN_W             16     # largura do sprite de inimigo
+.eqv EN_H             16     # altura do sprite de inimigo
+# Visibilidade usa o CENTRO do inimigo (x+EN_W/2, y+EN_H/2) contra os
+# limites SCREEN_* -> ele so perde o spotted quando a maioria do corpo
+# saiu da tela. Ver a checagem em enemies.s (EU_LOOP).
+.eqv EN_FLYER_HP       3
+.eqv EN_RUNNER_HP      4
+
+# --- limites de visibilidade na tela (hoje = coords de tela, tp=0) --- #
+# Quando o scroll entrar, SCREEN_LEFT vira a posicao X da camera.
+.eqv SCREEN_LEFT    0
+.eqv SCREEN_RIGHT   320
+.eqv SCREEN_TOP     0
+.eqv SCREEN_BOT     240
+
+.data
+.align 2
+ENEMY_POOL:
+    .space 448    # EN_MAX(8) * EN_STRIDE(56)
+
+# ------------------------------------------------------------------- #
+#  Sprites placeholder 16x16 (256 bytes cada), 1 byte/pixel.          #
+#  SUBSTITUIR pelos sprites reais (imagens do enunciado) via           #
+#  bmp2oac3.exe depois. Cores: indice 48 (voador), 16 (corredor).     #
+# ------------------------------------------------------------------- #
+FLYER_SPRITE:
+    .byte  0, 0, 0,48,48,48,48,48,48,48,48, 0, 0, 0, 0, 0
+    .byte  0, 0,48,48,48,48,48,48,48,48,48,48, 0, 0, 0, 0
+    .byte  0,48,48,48,48,48,48,48,48,48,48,48,48, 0, 0, 0
+    .byte  0,48,48, 0, 0,48,48,48,48, 0, 0,48,48, 0, 0, 0
+    .byte 48,48,48, 0, 0,48,48,48,48, 0, 0,48,48,48, 0, 0
+    .byte 48,48,48,48,48,48,48,48,48,48,48,48,48,48, 0, 0
+    .byte 48,48,48,48,48,48,48,48,48,48,48,48,48,48, 0, 0
+    .byte  0,48,48,48,48,48,48,48,48,48,48,48,48, 0, 0, 0
+    .byte  0,48, 0,48, 0,48, 0,48, 0,48, 0,48, 0, 0, 0, 0
+    .byte  0, 0,48, 0,48, 0,48, 0,48, 0,48, 0, 0, 0, 0, 0
+    .byte  0, 0, 0,48, 0,48, 0,48, 0,48, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0,48, 0,48, 0,48, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0,48, 0,48, 0, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,48, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+RUNNER_SPRITE:
+    .byte  0, 0,16,16,16,16,16,16,16,16, 0, 0, 0, 0, 0, 0
+    .byte  0,16,16,16,16,16,16,16,16,16,16, 0, 0, 0, 0, 0
+    .byte 16,16, 0, 0,16,16,16,16, 0, 0,16,16, 0, 0, 0, 0
+    .byte 16,16, 0, 0,16,16,16,16, 0, 0,16,16, 0, 0, 0, 0
+    .byte 16,16,16,16,16,16,16,16,16,16,16,16, 0, 0, 0, 0
+    .byte 16,16,16,16,16,16,16,16,16,16,16,16, 0, 0, 0, 0
+    .byte  0,16,16,16,16,16,16,16,16,16,16, 0, 0, 0, 0, 0
+    .byte  0, 0,16,16,16,16,16,16,16,16, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0,16,16, 0, 0,16,16, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0,16,16, 0, 0, 0, 0,16,16, 0, 0, 0, 0, 0, 0
+    .byte  0,16,16, 0, 0, 0, 0, 0, 0,16,16, 0, 0, 0, 0, 0
+    .byte 16,16, 0, 0, 0, 0, 0, 0, 0, 0,16,16, 0, 0, 0, 0
+    .byte 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,16, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0

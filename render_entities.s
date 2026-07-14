@@ -52,6 +52,39 @@ RE_NEXT:
     addi s1, s1, -1
     bnez s1, RE_LOOP
 
+    # ================= 2a passada: INIMIGOS ======================== #
+    la   s0, ENEMY_POOL
+    li   s1, EN_MAX
+RE_EN_LOOP:
+    lw   t0, EN_active(s0)
+    beqz t0, RE_EN_NEXT
+
+    # escolhe o sprite pelo tipo
+    lw   t0, EN_type(s0)
+    li   t1, ENT_FLYER
+    bne  t0, t1, RE_EN_RUNNER
+    la   a0, FLYER_SPRITE
+    j    RE_EN_DRAW
+RE_EN_RUNNER:
+    la   a0, RUNNER_SPRITE
+RE_EN_DRAW:
+    flw  ft0, PH_x(s0)
+    fcvt.w.s a1, ft0            # X (float -> int)
+    flw  ft0, PH_y(s0)
+    fcvt.w.s a2, ft0            # Y
+    li   a3, EN_W
+    li   a4, EN_H
+    la   t0, GAME_STATE
+    lw   a5, GS_frame(t0)       # frame destino (double buffering)
+    li   a6, 0
+    li   a7, 0
+    call RENDER_SPRITE
+
+RE_EN_NEXT:
+    addi s0, s0, EN_STRIDE
+    addi s1, s1, -1
+    bnez s1, RE_EN_LOOP
+
 RE_END:
     lw   ra, 8(sp)
     lw   s0, 4(sp)

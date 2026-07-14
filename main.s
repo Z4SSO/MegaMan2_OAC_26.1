@@ -34,6 +34,8 @@ main:
     li   t1, SCENE_GAME
     sw   t1, GS_scene(t0)        # comeca direto no jogo (menu vem depois)
 
+    call ENEMY_SPAWN_INIT        # semeia inimigos de teste
+
     j SETUP                      # SETUP renderiza o mapa e cai no GAME_LOOP
 
 # ---- Modulos de codigo --------------------------------------------- #
@@ -55,6 +57,7 @@ main:
 .include "render_sprite.s"     # RENDER_SPRITE (desenho de sprite individual)
 .include "attack.s"            # ATTACK_UPDATE (tiros do Buster, req 2)
 .include "render_entities.s"   # RENDER_ENTITIES (desenha projeteis/inimigos)
+.include "enemies.s"           # ENEMY_UPDATE + ENEMY_SPAWN_INIT (IA dos inimigos)
 .include "music_data.s"        # DADOS de todas as musicas + MUSIC_TABLE
 .include "music_state.s"       # MUSIC_SELECT (escolhe a musica pela cena/estado)
 .include "musicFunct.s"        # MUSIC_LOOP / PLAY_MUSIC (motor de reproducao)
