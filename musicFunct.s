@@ -1,151 +1,68 @@
-.data
-# Instrumentos e volumes de cada canal
-.eqv INSTRUMENTO1  25
-.eqv VOLUME1       100
-
-.eqv INSTRUMENTO2  25
-.eqv VOLUME2       70
-
-.eqv INSTRUMENTO3  25
-.eqv VOLUME3       110
-
-# ------------------------------------------------------------
-# Estrutura de um canal (7 words):
-#   [0]  ponteiro para a nota atual
-#   [4]  timer (momento absoluto do próximo disparo, em ms)
-#   [8]  endereço de fim da música
-#   [12] flag (1 = terminou)
-#   [16] endereço de início (para reset)
-#   [20] instrumento MIDI
-#   [24] volume (velocity)
-# ------------------------------------------------------------
-
-CANAL_1:
-    .word CANAL_1_NOTAS   # [0]
-    .word 0               # [4] timer
-    .word CANAL_1_FIM     # [8] fim
-    .word 0               # [12] flag
-    .word CANAL_1_NOTAS   # [16] início
-    .word INSTRUMENTO1    # [20] instrumento
-    .word VOLUME1         # [24] volume
-
-CANAL_1_NOTAS:
-    .word 64,600, 63,200, 67,600, 63,200, 64,400, 69,400, 66,400, 63,400
-    .word 64,600, 63,200, 67,600, 63,200, 64,400, 67,400, 66,400, 71,400
-    .word 64,600, 63,200, 67,600, 63,200, 64,400, 69,400, 66,400, 63,400
-    .word 64,400, 67,400, 66,400, 63,400, 64,800, 67,400, 69,200, 67,200
-    .word 66,400, 65,400, 64,400, 63,400, 64,800, 67,400, 69,200, 67,200
-    .word 66,400, 70,400, 71,400, 66,400, 67,800, 69,400, 71,200, 69,200
-    .word 66,400, 68,200, 69,200, 68,200, 67,200, 65,200, 64,200
-    .word 63,800, 66,400, 67,400, 66,400, 67,400, 76,200, 74,200, 72,200, 72,200
-    .word 64,600, 66,200, 68,200, 71,200, 69,600, 67,400, 66,200, 64,200, 67,400, 63,200
-    .word 64,600, 66,200, 68,200, 71,200, 69,600, 67,400, 66,200, 64,200, 67,400, 63,200
-    .word 64,600, 66,200, 68,200, 71,200, 69,600, 67,400, 66,200, 64,200, 67,400, 63,200
-    .word 64,600, 66,200, 68,200, 71,200, 69,600, 67,400, 66,200, 64,200, 67,400, 63,200
-    .word 64,800, 67,800, 66,800, 71,800, 64,800, 67,800, 66,800, 74,800
-    .word 64,800, 67,800, 66,800, 71,800, 64,800, 67,800, 69,800, 76,200, 74,200, 72,200, 72,200
-    .word 64,600, 66,200, 68,200, 71,200, 69,600, 67,400, 66,200, 64,200, 67,400, 63,200
-    .word 64,600, 66,200, 68,200, 71,200, 69,600, 67,400, 66,200, 64,200, 67,400, 63,200
-    .word 64,600, 66,200, 68,200, 71,200, 69,600, 67,400, 66,200, 64,200, 67,400, 63,200
-    .word 64,600, 66,200, 68,200, 71,200, 69,600, 67,400, 66,200, 64,200, 67,400, 63,200
-    .word 64,800, 67,800, 66,800, 71,800, 64,800, 67,800, 66,800, 74,800
-    .word 64,800, 67,800, 66,800, 71,800, 64,800, 67,800, 69,800, 76,200, 74,200, 72,200, 72,200
-CANAL_1_FIM:
-
-CANAL_2:
-    .word CANAL_2_NOTAS
-    .word 0
-    .word CANAL_2_FIM
-    .word 0
-    .word CANAL_2_NOTAS
-    .word INSTRUMENTO2
-    .word VOLUME2
-
-CANAL_2_NOTAS:
-    .word 40,2000, 39,400, 36,400, 39,400, 40,2000, 39,400, 36,400, 39,400
-    .word 40,2000, 39,400, 36,400, 35,400, 33,800, 34,800, 35,800, 45,400, 43,400
-    .word 42,400, 41,400, 40,400, 43,400, 42,800, 45,400, 43,400, 42,400, 41,400, 40,800
-    .word 35,800, 57,400, 56,400, 57,400, 55,200, 56,200, 55,200, 54,200, 53,200, 52,200
-    .word 51,800, 54,400, 55,400, 54,400, 55,400, 48,200, 49,200, 50,200, 51,200
-    .word 52,600, 54,600, 57,800, 55,400, 54,400, 55,400
-    .word 52,600, 54,600, 57,800, 55,400, 54,400, 55,400
-    .word 52,600, 54,600, 57,800, 55,400, 54,400, 55,400
-    .word 52,600, 54,600, 57,800, 55,400, 54,400, 55,400
-    .word 52,800, 50,200, 48,200, 50,200, 47,200, 50,200, 48,200, 52,200, 50,200, 54,200, 52,200, 55,200, 57,200
-    .word 52,800, 50,200, 48,200, 50,200, 47,200, 50,200, 48,200, 52,200, 50,200, 54,200, 52,200, 57,200, 59,200
-    .word 52,800, 50,200, 48,200, 50,200, 47,200, 50,200, 48,200, 52,200, 50,200, 54,200, 52,200, 55,200, 57,200
-    .word 52,800, 50,200, 48,200, 50,200, 47,200, 50,200, 48,200, 52,200, 50,200, 48,200, 49,200, 50,200, 51,200
-    .word 52,600, 54,600, 57,800, 55,400, 54,400, 55,400
-    .word 52,600, 54,600, 57,800, 55,400, 54,400, 55,400
-    .word 52,600, 54,600, 57,800, 55,400, 54,400, 55,400
-    .word 52,600, 54,600, 57,800, 55,400, 54,400, 55,400
-    .word 52,800, 50,200, 48,200, 50,200, 47,200, 50,200, 48,200, 52,200, 50,200, 54,200, 52,200, 55,200, 57,200
-    .word 52,800, 50,200, 48,200, 50,200, 47,200, 50,200, 48,200, 52,200, 50,200, 54,200, 52,200, 57,200, 59,200
-    .word 52,800, 50,200, 48,200, 50,200, 47,200, 50,200, 48,200, 52,200, 50,200, 54,200, 52,200, 55,200, 57,200
-    .word 52,800, 50,200, 48,200, 50,200, 47,200, 50,200, 48,200, 52,200, 50,200, 48,200, 49,200, 50,200, 51,200
-CANAL_2_FIM:
-
-CANAL_3:
-    .word CANAL_3_NOTAS
-    .word 0
-    .word CANAL_3_FIM
-    .word 0
-    .word CANAL_3_NOTAS
-    .word INSTRUMENTO3
-    .word VOLUME3
-
-CANAL_3_NOTAS:
-    .word 0,24000
-    .word 28,600, 31,600, 33,800, 35,400, 31,400, 33,400
-    .word 28,600, 31,600, 33,800, 35,400, 36,400, 35,400
-    .word 28,600, 31,600, 33,800, 35,400, 31,400, 33,400
-    .word 28,600, 31,600, 33,800, 35,400, 36,400, 35,400
-    .word 28,800, 31,800, 33,800, 31,800
-    .word 28,800, 31,800, 33,800, 35,800
-    .word 28,800, 31,800, 33,800, 31,800
-    .word 28,800, 31,800, 33,800, 0,800
-    .word 28,600, 31,600, 33,800, 35,400, 31,400, 33,400
-    .word 28,600, 31,600, 33,800, 35,400, 36,400, 35,400
-    .word 28,600, 31,600, 33,800, 35,400, 31,400, 33,400
-    .word 28,600, 31,600, 33,800, 35,400, 36,400, 35,400
-    .word 28,800, 31,800, 33,800, 31,800
-    .word 28,800, 31,800, 33,800, 35,800
-    .word 28,800, 31,800, 33,800, 31,800
-    .word 28,800, 31,800, 33,800, 0,800
-CANAL_3_FIM:
+# ==================================================================== #
+#  musicFunct.s  --  MOTOR de reproducao de musica (sem dados)         #
+#                                                                      #
+#  Os DADOS das musicas foram movidos para music_data.s (um bloco de   #
+#  3 canais por musica, rotulos prefixados, + MUSIC_TABLE). A POLITICA #
+#  de qual musica tocar mora em music_state.s (MUSIC_SELECT). Aqui     #
+#  ficou so o motor generico: toca a musica atualmente ARMADA.         #
+#                                                                      #
+#  Contrato: MUSIC_SELECT ja rodou neste frame e deixou em             #
+#  GS_music_cur o endereco da tabela <SONG> (3 words = enderecos dos   #
+#  canais 1,2,3) da musica ativa -- ou 0 se nenhuma. O MUSIC_LOOP le   #
+#  esse ponteiro e avanca os 3 canais; quando os 3 terminam, faz loop  #
+#  (reset) da PROPRIA musica ativa.                                    #
+#                                                                      #
+#  PLAY_MUSIC e RESET_CANAL sao os mesmos de sempre (nao mudaram):     #
+#  operam sobre UM canal cujo endereco vem em a0.                      #
+# ==================================================================== #
 
 .text
 
+# -------------------------------------------------------------------- #
+#  MUSIC_LOOP  --  avanca a musica armada (GS_music_cur). Sem musica    #
+#  armada (ponteiro 0), retorna sem tocar nada.                        #
+# -------------------------------------------------------------------- #
 MUSIC_LOOP:
-    addi sp, sp, -4
+    addi sp, sp, -8
     sw   ra, 0(sp)
+    sw   s0, 4(sp)
 
-    la   a0, CANAL_1
-    call PLAY_MUSIC
-    mv   t5, a7            # t5 = 1 se CANAL_1 terminou
+    la   t0, GAME_STATE
+    lw   s0, GS_music_cur(t0)   # s0 = tabela <SONG> da musica ativa
+    beqz s0, MUSIC_LOOP_FIM     # nenhuma musica armada: nada a fazer
 
-    la   a0, CANAL_2
+    lw   a0, 0(s0)              # CANAL_1
     call PLAY_MUSIC
-    and  t5, t5, a7        # t5 = 1 se ambos 1 e 2 terminaram
+    mv   t5, a7                 # t5 = 1 se CANAL_1 terminou
 
-    la   a0, CANAL_3
+    lw   a0, 4(s0)             # CANAL_2
     call PLAY_MUSIC
-    and  t5, t5, a7        # t5 = 1 se os três terminaram
+    and  t5, t5, a7            # t5 = 1 se 1 e 2 terminaram
+
+    lw   a0, 8(s0)            # CANAL_3
+    call PLAY_MUSIC
+    and  t5, t5, a7            # t5 = 1 se os tres terminaram
 
     beqz t5, MUSIC_LOOP_FIM
 
-    la   a0, CANAL_1
+    # Loop da musica: reseta os 3 canais DELA (s0 sobreviveu ao call)
+    lw   a0, 0(s0)
     call RESET_CANAL
-    la   a0, CANAL_2
+    lw   a0, 4(s0)
     call RESET_CANAL
-    la   a0, CANAL_3
+    lw   a0, 8(s0)
     call RESET_CANAL
 
 MUSIC_LOOP_FIM:
     lw   ra, 0(sp)
-    addi sp, sp, 4
+    lw   s0, 4(sp)
+    addi sp, sp, 8
     ret
 
+# -------------------------------------------------------------------- #
+#  PLAY_MUSIC  --  avanca UM canal (a0 = base do canal). Retorna em a7  #
+#  1 se o canal ja terminou, 0 caso contrario. INALTERADO.             #
+# -------------------------------------------------------------------- #
 PLAY_MUSIC:
     addi sp, sp, -16
     sw   ra, 0(sp)
@@ -160,9 +77,9 @@ PLAY_MUSIC:
 
     lw   t0, 0(s1)           # t0 = ponteiro nota atual
     lw   t3, 4(s1)           # t3 = timer
-    lw   t4, 8(s1)           # t4 = endereço fim
+    lw   t4, 8(s1)           # t4 = endereco fim
 
-    #tempo atual único
+    #tempo atual unico
     li   a7, 30
     ecall
     mv   s2, a0              # s2 = tempo atual ms
@@ -170,24 +87,24 @@ PLAY_MUSIC:
     # Se timer = 0 toca imediatamente
     beqz t3, DISPARA_NOTA
 
-    # se não espera até que o tempo atual >= timer
+    # se nao espera ate que o tempo atual >= timer
     blt  s2, t3, NAO_TERMINOU
 
 DISPARA_NOTA:
-    lw   a0, 0(t0)           
-    lw   a1, 4(t0)          
-    lw   a2, 20(s1)          
-    lw   a3, 24(s1)          
+    lw   a0, 0(t0)
+    lw   a1, 4(t0)
+    lw   a2, 20(s1)
+    lw   a3, 24(s1)
     li   a7, 31
     ecall
 
-    bgt  t3, s2, usa_t3      # se timer > agora, mantém base
-    mv   t3, s2              # senão, usa o momento atual como base
+    bgt  t3, s2, usa_t3      # se timer > agora, mantem base
+    mv   t3, s2              # senao, usa o momento atual como base
 usa_t3:
     add  t3, t3, a1
     sw   t3, 4(s1)
 
-    # Avança o ponteiro para a próxima nota
+    # Avanca o ponteiro para a proxima nota
     addi t0, t0, 8
     sw   t0, 0(s1)
 
@@ -217,9 +134,12 @@ PLAY_MUSIC_RET:
     ret
 
 
+# -------------------------------------------------------------------- #
+#  RESET_CANAL  --  volta UM canal (a0) ao inicio. INALTERADO.         #
+# -------------------------------------------------------------------- #
 RESET_CANAL:
     mv   t0, a0
-    lw   t1, 16(t0)          # endereço inicial da música
+    lw   t1, 16(t0)          # endereco inicial da musica
     sw   t1, 0(t0)           # reinicia ponteiro
     sw   zero, 4(t0)         # zera timer
     sw   zero, 12(t0)        # zera flag
