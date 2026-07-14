@@ -27,6 +27,16 @@
 .eqv SCENE_GAMEOVER  2
 .eqv SCENE_WIN       3
 
+# ---- Ids de musica (indices no MUSIC_TABLE de music_data.s) -------- #
+# A ORDEM aqui deve casar com a ordem das entradas no MUSIC_TABLE.
+.eqv MUS_INICIO      0   # menu / tela inicial
+.eqv MUS_ESTAGIO1    1   # 1o estagio jogavel
+.eqv MUS_ESTAGIO2    2   # 2a area
+.eqv MUS_CHEFAO      3   # luta de chefe
+.eqv MUS_GAMEOVER    4   # game over
+.eqv MUS_VITORIA     5   # vitoria
+.eqv MUS_NONE       -1   # nenhuma musica armada ainda (forca 1o arme)
+
 # -------------------- Bits de input (KDMMIO) ------------------------ #
 # Mascaras de bit em GAME_STATE.input_bits. Uma tecla por bit.
 # Ajuste os codigos de tecla no INPUT_READ conforme o teclado do FPGA.
@@ -68,6 +78,13 @@ PHYS_GROUND_Y: .float 160.0
 .eqv GS_kbd_prev    24  # word: buffer anterior (usado pela versao SCANCODE/DE2)
 .eqv GS_held_bits   28  # word: teclas de movimento seguradas (versao KDMMIO/PC)
 .eqv GS_held_timer  32  # word: frames restantes do auto-hold (versao KDMMIO/PC)
+# ---- Musica --------------------------------------------------------- #
+.eqv GS_music_id    36  # word: id (MUS_*) da musica que DEVE tocar agora.
+                        #   Qualquer sistema (door, boss, scene) escreve aqui.
+.eqv GS_music_armed 40  # word: id da musica atualmente ARMADA (tocando).
+                        #   Se != GS_music_id, o MUSIC_SELECT re-arma. Comeca MUS_NONE.
+.eqv GS_music_cur   44  # word: ponteiro p/ a tabela <SONG> da musica armada.
+                        #   0 = nenhuma; o MUSIC_LOOP nao toca nada enquanto 0.
 
 GAME_STATE:
     .word SCENE_GAME    # GS_scene
@@ -79,6 +96,9 @@ GAME_STATE:
     .word 0             # GS_kbd_prev
     .word 0             # GS_held_bits
     .word 0             # GS_held_timer
+    .word MUS_INICIO    # GS_music_id    (comeca pedindo a musica do menu)
+    .word MUS_NONE      # GS_music_armed (nada armado -> forca o 1o arme)
+    .word 0             # GS_music_cur   (ponteiro nulo ate o 1o MUSIC_SELECT)
 
 # ==================================================================== #
 #  COMPONENTE DE FISICA (layout compartilhado por TODAS as entidades)  #
@@ -169,3 +189,52 @@ PLAYER_SPRITE:
     .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
     .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
     .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
+
+# ==================================================================== #
+#  PROJECTILE POOL  --  tiros do Buster (req 2 / base do req 4)         #
+#  ------------------------------------------------------------------  #
+#  Pool de tamanho fixo (PROJ_MAX). Cada slot e uma struct de 5 words  #
+#  (PROJ_STRIDE = 20 bytes). Coordenadas em PIXELS INTEIROS (o tiro    #
+#  anda a velocidade constante, sem fisica float -- por isso int).     #
+#                                                                      #
+#  Layout de um slot (offsets a partir do inicio do slot):             #
+#    PR_active  0  : 0 = livre, 1 = em voo                             #
+#    PR_x       4  : X na tela (top-left do sprite do tiro)            #
+#    PR_y       8  : Y na tela (top-left)                              #
+#    PR_vx     12  : velocidade horizontal (px/frame, com sinal)       #
+#    PR_type   16  : tipo de arma (0 = Buster). Reservado p/ req 4.    #
+#                                                                      #
+#  attack.s escreve/avanca; render_entities.s le e desenha.            #
+# ==================================================================== #
+.eqv PROJ_MAX     8      # numero de slots no pool
+.eqv PROJ_STRIDE  20     # bytes por slot (5 words)
+.eqv PR_active    0
+.eqv PR_x         4
+.eqv PR_y         8
+.eqv PR_vx        12
+.eqv PR_type      16
+
+.eqv PROJ_SPEED   6      # px/frame do tiro do Buster
+.eqv PROJ_W       8      # largura do sprite do tiro
+.eqv PROJ_H       8      # altura do sprite do tiro
+
+.data
+.align 2
+PROJ_POOL:
+    # PROJ_MAX slots x PROJ_STRIDE bytes, zerados (todos livres no boot)
+    .space 160    # 8 * 20
+
+# ------------------------------------------------------------------- #
+#  BUSTER_SPRITE -- placeholder 8x8 (64 bytes), 1 byte/pixel.          #
+#  Bolinha de cor viva (indice 40) com cantos vazios (0 = preto) pra   #
+#  dar formato arredondado. SUBSTITUIR pelo sprite real depois.        #
+# ------------------------------------------------------------------- #
+BUSTER_SPRITE:
+    .byte  0, 0,40,40,40,40, 0, 0
+    .byte  0,40,40,40,40,40,40, 0
+    .byte 40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40
+    .byte 40,40,40,40,40,40,40,40
+    .byte  0,40,40,40,40,40,40, 0
+    .byte  0, 0,40,40,40,40, 0, 0

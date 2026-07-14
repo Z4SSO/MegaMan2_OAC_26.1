@@ -51,7 +51,7 @@ beqz a7,NORMAL_WORD
 	
 	
 	PRINT_LINE_WORD:	
-		lb t4,0(a0)	# loads word(4 pixels) on t4
+		lbu t4,0(a0)	# loads word(4 pixels) on t4
 		sb t4,0(t0)	# prints 4 pixels from t4
 		
 		addi t0,t0,1	# increments bitmap address

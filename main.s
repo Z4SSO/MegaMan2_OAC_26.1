@@ -53,7 +53,11 @@ main:
 .include "render_map_frame.s"  # RENDER_MAP_FRAME (redesenho do mapa por frame)
 .include "render_player.s"     # RENDER_PLAYER (desenha o personagem)
 .include "render_sprite.s"     # RENDER_SPRITE (desenho de sprite individual)
-.include "musicFunct.s"        # MUSIC_LOOP / PLAY_MUSIC (musica multi-canal)
+.include "attack.s"            # ATTACK_UPDATE (tiros do Buster, req 2)
+.include "render_entities.s"   # RENDER_ENTITIES (desenha projeteis/inimigos)
+.include "music_data.s"        # DADOS de todas as musicas + MUSIC_TABLE
+.include "music_state.s"       # MUSIC_SELECT (escolhe a musica pela cena/estado)
+.include "musicFunct.s"        # MUSIC_LOOP / PLAY_MUSIC (motor de reproducao)
 .include "setup.s"             # SETUP (render inicial do mapa)
 .include "render.s"            # RENDER_WORD / RENDER_COLOR / RENDER_MAP
 
