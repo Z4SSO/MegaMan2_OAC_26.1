@@ -20,7 +20,7 @@
 .eqv SC_RIGHT  0x23   # 'd'
 .eqv SC_UP     0x1D   # 'w'
 .eqv SC_DOWN   0x1B   # 's'
-.eqv SC_JUMP   0x42   # 'k'
+.eqv SC_JUMP   0x29   # barra de espaco (space)
 .eqv SC_SHOOT  0x3B   # 'j'
 .eqv SC_SWAP   0x4B   # 'l'
 

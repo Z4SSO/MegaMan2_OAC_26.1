@@ -28,7 +28,7 @@
 .eqv KEY_RIGHT  100   # 'd'
 .eqv KEY_UP     119   # 'w'
 .eqv KEY_DOWN   115   # 's'
-.eqv KEY_JUMP   107   # 'k'
+.eqv KEY_JUMP   32    # barra de espaco (space)
 .eqv KEY_SHOOT  106   # 'j'
 .eqv KEY_SWAP   108   # 'l'
 
