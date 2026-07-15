@@ -52,6 +52,11 @@ RENDER_PLAYER:
     bgt   a1, t3, RP_SKIP
     flw   ft1, PH_y(t0)
     fcvt.w.s a2, ft1            # a2 = (int) y (sem scroll vertical)
+    # CULL vertical: pulo perto do topo poe Y negativo -> endereco antes
+    # do framebuffer -> CRASH. Mesma regra do X: fora inteiro, nao desenha.
+    bltz  a2, RP_SKIP           # saiu por cima
+    li    t3, 192               # 240 - PLAYER_H(48)
+    bgt   a2, t3, RP_SKIP       # saiu por baixo
 
     li   a3, PLAYER_W            # largura real (32)
     li   a4, PLAYER_H            # altura real (48)

@@ -133,9 +133,7 @@ ABILITY_UPDATE:
 #  TODO: checar tile solido sob/ao lado do player; aplicar dano com    #
 #        i-frames; coletar itens.                                      #
 # -------------------------------------------------------------------- #
-COLLISION_UPDATE:
-    ret
-
+# COLLISION_UPDATE -> implementado em collision.s
 # -------------------------------------------------------------------- #
 #  DOOR_UPDATE                                                         #
 #  Detecta o player numa porta e dispara a troca de area. Req 7.       #
@@ -158,9 +156,7 @@ DOOR_UPDATE:
 #  Reaproveitar a tecnica de fonte no bitmap (sprites de digitos).     #
 #  TODO: desenhar barra de HP a partir de PLAYER_health/max_hp.        #
 # -------------------------------------------------------------------- #
-RENDER_HUD:
-    ret
-
+# RENDER_HUD -> implementado em render_hud.s
 # -------------------------------------------------------------------- #
 #  SFX_UPDATE                                                          #
 #  Dispara efeitos sonoros pendentes (tiro, dano, item). Req 1.        #

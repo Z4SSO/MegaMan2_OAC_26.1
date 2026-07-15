@@ -46,6 +46,9 @@ RE_LOOP:
     li   t2, 312                 # 320 - PROJ_W(8)
     bgt  a1, t2, RE_NEXT         # saiu pela direita
     lw   a2, PR_y(s0)             # Y na tela (sem scroll vertical)
+    bltz a2, RE_NEXT              # CULL Y: fora por cima (evita crash)
+    li   t2, 232                  # 240 - PROJ_H(8)
+    bgt  a2, t2, RE_NEXT          # fora por baixo
     li   a3, PROJ_W               # largura (8)
     li   a4, PROJ_H               # altura (8)
 
@@ -94,6 +97,10 @@ RE_EN_DRAW:
     bgt  a1, t2, RE_EN_NEXT    # saiu pela direita
     flw  ft0, PH_y(s0)
     fcvt.w.s a2, ft0            # Y (sem scroll vertical)
+    bltz a2, RE_EN_NEXT         # CULL Y: fora por cima (evita crash)
+    li   t2, 240
+    sub  t2, t2, a4             # 240 - altura do sprite
+    bgt  a2, t2, RE_EN_NEXT     # fora por baixo
     lw   a5, GS_frame(t0)       # frame destino (double buffering)
     li   a6, 0
     li   a7, 0

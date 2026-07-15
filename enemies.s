@@ -261,22 +261,8 @@ EU_INTEGRATE:
     mv   a0, s0
     call PHYSICS_STEP          # integra vx/vy/x/y do inimigo (s0 sobrevive)
 
-    # ---- Chao PROVISORIO so p/ o CORREDOR (remover c/ COLLISION) --- #
-    # Mesmo chao fixo (PHYS_GROUND_Y) que o player usa: sem colisao real
-    # ainda, o corredor cairia p/ fora da tela. O voador NAO e afetado
-    # (voa livre). Substituir por colisao player<->tile no Bloco 4.
-    lw   t2, EN_type(s0)
-    li   t3, ENT_RUNNER
-    bne  t2, t3, EU_ANIM       # nao e corredor: pula o clamp
-        flw  ft0, PH_y(s0)
-        la   t2, PHYS_GROUND_Y
-        flw  ft1, 0(t2)        # ft1 = chao
-        flt.s t2, ft0, ft1     # (y < chao)?
-        bnez t2, EU_ANIM       # ainda acima do chao: deixa cair
-            fsw  ft1, PH_y(s0) # assenta no chao
-            la   t2, PHYS_ZERO
-            flw  ft2, 0(t2)
-            fsw  ft2, PH_vy(s0) # zera vy
+    # (chao provisorio removido: a colisao real com os tiles do mapa,
+    #  em collision.s, resolve chao/paredes de TODOS os inimigos)
 
     # anima (contador simples)
 EU_ANIM:

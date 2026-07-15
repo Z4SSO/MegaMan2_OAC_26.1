@@ -97,22 +97,10 @@ PU_PHYSICS:
     call  PHYSICS_STEP
     la    t0, PLAYER           # recarrega base
 
-    # =============== 4. Chao PROVISORIO (remover c/ colisao) ======= #
-    flw   ft0, PH_y(t0)
-    la    t2, PHYS_GROUND_Y
-    flw   ft1, 0(t2)           # ft1 = chao
-    flt.s t2, ft0, ft1         # (y < chao)?
-    bnez  t2, PU_AIRBORNE      # acima do chao -> no ar
-        fsw   ft1, PH_y(t0)     # assenta no chao
-        la    t2, PHYS_ZERO
-        flw   ft2, 0(t2)
-        fsw   ft2, PH_vy(t0)    # zera vy
-        li    t2, 1
-        sw    t2, PLAYER_on_ground(t0)
-        j     PU_END
-
-PU_AIRBORNE:
-    sw    zero, PLAYER_on_ground(t0)
+    # =============== 4. Chao/paredes: COLLISION_UPDATE ============= #
+    # O chao provisorio (PHYS_GROUND_Y) foi removido: a colisao real
+    # com os tiles do mapa (collision.s) resolve pes/cabeca/paredes e
+    # escreve PLAYER_on_ground todo frame, logo apos este update.
 
 PU_END:
     lw    ra, 0(sp)

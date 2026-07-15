@@ -310,6 +310,11 @@ BUSTER_SPRITE:
 # saiu da tela. Ver a checagem em enemies.s (EU_LOOP).
 .eqv EN_FLYER_HP       3
 .eqv EN_RUNNER_HP      4
+# --- Dano de contato por tipo (subtraido de PLAYER_health no toque).
+#     Vida do player = 28 -> voador(4) mata em 7 toques, corredor(6) em 5.
+#     Sao os botoes de balanceamento: suba p/ deixar mais punitivo.
+.eqv EN_FLYER_DMG      4
+.eqv EN_RUNNER_DMG     6
 
 # --- limites de visibilidade na tela (hoje = coords de tela, tp=0) --- #
 # Quando o scroll entrar, SCREEN_LEFT vira a posicao X da camera.
