@@ -107,12 +107,19 @@ DU_END:
 #  DU_ARM_TRANSITION -- entra em SCENE_TRANSITION rumo a fase a0        #
 # -------------------------------------------------------------------- #
 DU_ARM_TRANSITION:
+    # Passou a chamar SFX_PLAY -> precisa de pilha pro ra (era leaf).
+    addi sp, sp, -4
+    sw   ra, 0(sp)
     la   t0, GAME_STATE
     li   t1, SCENE_TRANSITION
     sw   t1, GS_scene(t0)
     sw   a0, GS_transition_target(t0)
     li   t1, TRANSITION_DURATION
     sw   t1, GS_transition_timer(t0)
+    li   a0, SFX_DOOR              # som da porta (sfx.s), junto da tela preta
+    call SFX_PLAY
+    lw   ra, 0(sp)
+    addi sp, sp, 4
     ret
 
 # -------------------------------------------------------------------- #

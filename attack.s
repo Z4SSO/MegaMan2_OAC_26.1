@@ -83,6 +83,8 @@ AU_SPAWN_RIGHT:
     sw   t5, PR_x(t0)
     li   t3, PROJ_SPEED            # vx positivo
     sw   t3, PR_vx(t0)
+    li   a0, SFX_SHOOT             # som do Buster (sfx.s); t0..t6 nao sao
+    call SFX_PLAY                  # mais usados daqui pra frente
     j    AU_ADVANCE
 
 AU_SPAWN_LEFT:
@@ -93,6 +95,8 @@ AU_SPAWN_LEFT:
     li   t3, PROJ_SPEED
     neg  t3, t3                    # vx negativo
     sw   t3, PR_vx(t0)
+    li   a0, SFX_SHOOT             # som do Buster (sfx.s)
+    call SFX_PLAY
     j    AU_ADVANCE
 
     # ---- 4. Avanca todos os tiros ativos --------------------------- #

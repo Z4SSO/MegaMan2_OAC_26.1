@@ -71,6 +71,8 @@ main:
 .include "music_data.s"        # DADOS de todas as musicas + MUSIC_TABLE
 .include "music_state.s"       # MUSIC_SELECT (escolhe a musica pela cena/estado)
 .include "musicFunct.s"        # MUSIC_LOOP / PLAY_MUSIC (motor de reproducao)
+.include "sfx_data.s"          # DADOS dos efeitos sonoros + SFX_TABLE (req 1)
+.include "sfx.s"               # SFX_PLAY / SFX_UPDATE (motor de efeitos, req 1)
 .include "setup.s"             # SETUP (render inicial do mapa)
 .include "render.s"            # RENDER_WORD / RENDER_COLOR / RENDER_MAP
 

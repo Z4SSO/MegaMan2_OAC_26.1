@@ -116,6 +116,9 @@ PU_VERTICAL:
             flw  ft0, 0(t2)
             fsw  ft0, PH_vy(t0) # vy = velocidade de pulo (pra cima)
             sw   zero, PLAYER_on_ground(t0)
+            li   a0, SFX_JUMP   # som do pulo (sfx.s)
+            call SFX_PLAY
+            la   t0, PLAYER     # SFX_PLAY usa t0..t5: recarrega a base
         j    PU_PHYSICS
 
     # ---- No ar: pulo duplo ou dash (req 4), 1x por queda/pulo ------ #
@@ -143,6 +146,9 @@ PU_AIRBORNE:
     fsw  ft0, PH_vy(t0)         # 2o pulo: mesma velocidade do pulo normal
     li   t4, 1
     sw   t4, PLAYER_air_used(t0)
+    li   a0, SFX_DOUBLEJUMP     # som da habilidade pulo duplo (sfx.s)
+    call SFX_PLAY
+    la   t0, PLAYER             # SFX_PLAY usa t0..t5: recarrega a base
     j    PU_PHYSICS
 
     # ---- Dash -------------------------------------------------------#
@@ -175,6 +181,9 @@ PU_DASH_SIGN_OK:
     sw   t4, PLAYER_dash_timer(t0)
     li   t4, 1
     sw   t4, PLAYER_air_used(t0)
+    li   a0, SFX_DASH           # som da habilidade dash (sfx.s)
+    call SFX_PLAY
+    la   t0, PLAYER             # SFX_PLAY usa t0..t5: recarrega a base
 
     # =============== 3. Integra via engine ========================= #
 PU_PHYSICS:

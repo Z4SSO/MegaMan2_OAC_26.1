@@ -85,6 +85,34 @@
 .eqv MUS_VITORIA     5   # vitoria
 .eqv MUS_NONE       -1   # nenhuma musica armada ainda (forca 1o arme)
 
+# ---- Ids de efeito sonoro (indices na SFX_TABLE de sfx_data.s) ----- #
+# [Requisito 1, parte "efeitos sonoros"]
+# A ORDEM aqui deve casar com a ordem das entradas na SFX_TABLE.
+# Para tocar de qualquer subsistema:  li a0, SFX_<NOME>; call SFX_PLAY
+.eqv SFX_SHOOT         0   # tiro do Buster (attack.s)
+.eqv SFX_JUMP          1   # pulo do chao (player.s)
+.eqv SFX_DASH          2   # habilidade dash (player.s)
+.eqv SFX_DOUBLEJUMP    3   # habilidade pulo duplo (player.s)
+.eqv SFX_HURT          4   # player tomou dano (collision.s)
+.eqv SFX_ENEMY_HIT     5   # inimigo levou tiro e sobreviveu (collision.s)
+.eqv SFX_ENEMY_DEATH   6   # inimigo morreu (collision.s)
+.eqv SFX_ITEM          7   # coletou cura/recarga (items.s)
+.eqv SFX_DOOR          8   # entrou na porta (level.s)
+.eqv SFX_COUNT         9   # total de efeitos (tamanho da SFX_TABLE)
+.eqv SFX_NONE         -1   # nenhum efeito
+
+# ---- Offsets do SFX_CHANNEL (struct em sfx.s) ---------------------- #
+# Estado de reproducao do unico canal de efeito. O DADO do efeito
+# (sfx_data.s) e constante; o estado mutavel vive aqui -- por isso o
+# mesmo efeito pode tocar varias vezes sem se corromper.
+.eqv SC_active   0   # word: 1 = tem efeito tocando
+.eqv SC_ptr      4   # word: ponteiro pro proximo par (nota, duracao)
+.eqv SC_end      8   # word: endereco de fim das notas
+.eqv SC_timer   12   # word: momento absoluto (ms) do proximo disparo
+.eqv SC_instr   16   # word: instrumento MIDI do efeito atual
+.eqv SC_vol     20   # word: volume do efeito atual
+.eqv SC_prio    24   # word: prioridade do efeito atual (ver sfx.s)
+
 # -------------------- Bits de input (KDMMIO) ------------------------ #
 # Mascaras de bit em GAME_STATE.input_bits. Uma tecla por bit.
 # Ajuste os codigos de tecla no INPUT_READ conforme o teclado do FPGA.

@@ -301,16 +301,25 @@ CU_PE_BOX:
     lw   a6, EN_hp(s2)
     addi a6, a6, -1
     sw   a6, EN_hp(s2)
-    bgtz a6, CU_PR_NEXT
+    bgtz a6, CU_PE_HIT_SFX         # sobreviveu: som de "acertei" e segue
     sw   zero, EN_active(s2)       # morreu: libera o slot
     # dropa item de cura/recarga no centro da caixa do inimigo (req 6).
     # t4/t5 ainda tem x/y do inimigo, t6 a altura por tipo (setados no
     # topo do CU_PE_LOOP); largura e sempre 32 (EN_FLYER_W==EN_RUNNER_W).
+    # ORDEM IMPORTA: o ITEM_DROP vem ANTES do SFX_PLAY porque depende de
+    # t4/t5/t6, e o SFX_PLAY usa t0..t5 (destruiria a caixa do inimigo).
     mv   a0, t4
     mv   a1, t5
     li   a2, 32
     mv   a3, t6
     call ITEM_DROP
+    li   a0, SFX_ENEMY_DEATH       # som de explosao do inimigo (sfx.s)
+    call SFX_PLAY
+    j    CU_PR_NEXT
+
+CU_PE_HIT_SFX:                     # inimigo levou o tiro mas continua vivo
+    li   a0, SFX_ENEMY_HIT         # "tick" de acerto (sfx.s)
+    call SFX_PLAY
     j    CU_PR_NEXT
 CU_PE_NEXT:
     addi s2, s2, EN_STRIDE
@@ -366,10 +375,13 @@ CU_PL_DMG:
     sw   t6, PLAYER_health(t5)
     li   a6, 90
     sw   a6, PLAYER_invuln(t5)
-    bgtz t6, CU_END                # ainda vivo
+    bgtz t6, CU_PL_HURT_SFX        # ainda vivo: so o som de dano
     la   t5, GAME_STATE            # morreu: cena GAMEOVER
     li   t6, SCENE_GAMEOVER        # (a musica troca sozinha via MUSIC_SELECT)
     sw   t6, GS_scene(t5)
+CU_PL_HURT_SFX:
+    li   a0, SFX_HURT              # som de dano (sfx.s). Prioridade alta:
+    call SFX_PLAY                  # sempre vence o som do tiro.
     j    CU_END
 CU_PL_NEXT:
     addi s0, s0, EN_STRIDE

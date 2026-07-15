@@ -92,26 +92,35 @@ ID_END:
 #  Usa t0..t6, a3..a6.                                                 #
 # -------------------------------------------------------------------- #
 ITEM_PICKUP_UPDATE:
+    # Passou a CHAMAR SFX_PLAY (som de item coletado) -> deixou de ser leaf:
+    # precisa de pilha pro ra. O cursor do loop (t3) e o contador (t4) sao
+    # temporarios e o SFX_PLAY usa t0..t5, entao eles migraram para s0/s1
+    # (callee-saved), que sobrevivem ao call.
+    addi sp, sp, -12
+    sw   ra, 8(sp)
+    sw   s0, 4(sp)
+    sw   s1, 0(sp)
+
     la   t0, PLAYER
     flw  ft0, PH_x(t0)
     fcvt.w.s t1, ft0           # t1 = player x (mundo, int)
     flw  ft1, PH_y(t0)
     fcvt.w.s t2, ft1           # t2 = player y
 
-    la   t3, ITEM_POOL
-    li   t4, ITEM_MAX
+    la   s0, ITEM_POOL
+    li   s1, ITEM_MAX
 IPU_LOOP:
-    lw   t5, IT_active(t3)
+    lw   t5, IT_active(s0)
     beqz t5, IPU_NEXT
 
-    lw   t6, IT_x(t3)
+    lw   t6, IT_x(s0)
     # sobreposicao X: player(t1,PLAYER_W) vs item(t6,ITEM_W)
     addi a3, t6, ITEM_W
     bge  t1, a3, IPU_NEXT       # player a direita do item
     addi a3, t1, PLAYER_W
     bge  t6, a3, IPU_NEXT       # item a direita do player
 
-    lw   a4, IT_y(t3)
+    lw   a4, IT_y(s0)
     # sobreposicao Y: player(t2,PLAYER_H) vs item(a4,ITEM_H)
     addi a3, a4, ITEM_H
     bge  t2, a3, IPU_NEXT
@@ -119,8 +128,8 @@ IPU_LOOP:
     bge  a4, a3, IPU_NEXT
 
     # COLETOU: libera o slot e aplica o efeito conforme IT_type
-    sw   zero, IT_active(t3)
-    lw   a5, IT_type(t3)
+    sw   zero, IT_active(s0)
+    lw   a5, IT_type(s0)
     li   a6, ITEM_TYPE_HEAL
     bne  a5, a6, IPU_CHARGE
 
@@ -134,6 +143,8 @@ IPU_HEAL:
     mv   a3, a4                 # clamp no maximo
 IPU_HEAL_SET:
     sw   a3, PLAYER_health(a6)
+    li   a0, SFX_ITEM           # som de item coletado (sfx.s)
+    call SFX_PLAY
     j    IPU_NEXT
 
 IPU_CHARGE:
@@ -146,11 +157,25 @@ IPU_CHARGE:
     mv   a3, a4                 # clamp no maximo
 IPU_CHARGE_SET:
     sw   a3, PLAYER_ability_charge(a6)
+    li   a0, SFX_ITEM           # som de item coletado (sfx.s)
+    call SFX_PLAY
 
 IPU_NEXT:
-    addi t3, t3, ITEM_STRIDE
-    addi t4, t4, -1
-    bnez t4, IPU_LOOP
+    # o SFX_PLAY acima pode ter destruido t0..t2 (player x/y); recarrega
+    # antes da proxima iteracao comparar a caixa do player com outro item.
+    la   t0, PLAYER
+    flw  ft0, PH_x(t0)
+    fcvt.w.s t1, ft0
+    flw  ft1, PH_y(t0)
+    fcvt.w.s t2, ft1
+
+    addi s0, s0, ITEM_STRIDE
+    addi s1, s1, -1
+    bnez s1, IPU_LOOP
 
 IPU_END:
+    lw   ra, 8(sp)
+    lw   s0, 4(sp)
+    lw   s1, 0(sp)
+    addi sp, sp, 12
     ret
