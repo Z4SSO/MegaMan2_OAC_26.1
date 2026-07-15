@@ -286,7 +286,7 @@ BUSTER_SPRITE:
 .eqv ENF_SPOTTED  1  # avistou: persegue
 
 # --- parametros de comportamento --- #
-.eqv EN_SIGHT_RADIUS  120   # raio (px) de deteccao do player p/ virar SPOTTED
+.eqv EN_SIGHT_RADIUS  60    # era 120
 # --- Movimento por ACELERACAO: a IA escreve PH_ax/ay (via EN_ACCEL/
 #     EN_BRAKE, floats la em cima) e a engine integra vx/vy com clamp em
 #     vx_max/vy_max. Isso da INERCIA: ao pular por cima, o inimigo

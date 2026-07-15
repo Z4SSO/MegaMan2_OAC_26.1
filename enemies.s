@@ -126,15 +126,17 @@ EU_LOOP:
 
     flw  ft3, PH_y(s0)         # enemy.y
     flw  ft4, PH_y(s2)         # player.y
+    
     fsub.s ft5, ft4, ft3       # dy = player.y - enemy.y
+    fabs.s ft6, ft2
+    fabs.s ft7, ft5
 
-    # |dx| e |dy|
-    fabs.s ft6, ft2            # |dx|
-    fabs.s ft7, ft5            # |dy|
+    # <<< INSERIR AQUI >>>
+    lw   t2, EN_fsm(s0)
+    li   t3, ENF_SPOTTED
+    beq  t2, t3, EU_MOVE       # ja avistou: persegue sem re-checar nada
 
-    # ---- Visibilidade: o CENTRO do inimigo esta na TELA (camera)? -- #
-    # Converte mundo -> tela subtraindo GS_cam_x; assim "visivel" segue
-    # a janela da camera, nao os 320px fixos do inicio do mundo.
+    # ---- Visibilidade (so p/ a 1a deteccao) ----
     fcvt.w.s t2, ft0           # enemy.x MUNDO (canto, int)
     li   t4, EN_W
     srli t4, t4, 1             # EN_W/2
