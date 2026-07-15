@@ -99,7 +99,8 @@ GL_GAME_FLOW:
     call PLAYER_UPDATE     # 2. movimento, pulo, gravidade do Mega Man
     call ABILITY_UPDATE    # 3. troca de arma/habilidade ativa
     call ATTACK_UPDATE     # 4. spawn e movimento dos tiros do Buster
-    call ENEMY_UPDATE      # 5. IAs dos inimigos + chefao
+    call ENEMY_UPDATE
+    call BOSS_UPDATE       # 5b. FSM do chefao (so age se ha boss ativo)      # 5. IAs dos inimigos + chefao
     call COLLISION_UPDATE  # 6. colisoes (mapa, inimigo, tiro, itens)
     call DOOR_UPDATE       # 7. porta/gatilho de vitoria (level.s)
 

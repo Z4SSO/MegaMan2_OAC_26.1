@@ -23,6 +23,22 @@
 #     draw_x = x_tela - (spriteW - 32)/2    (ANIM_OFF_48/64, state.s)  #
 #     draw_y = y_tela                        (alturas iguais)          #
 #                                                                      #
+#  ---------------- ESPELHAMENTO (req 3: corrida simetrica) ---------  #
+#  Todos os .data do artista tem o personagem virado para a DIREITA    #
+#  (verificado renderizando os sprites: o canhao do PLAYER_SHOOT e a   #
+#  crista do capacete apontam p/ +X). Entao:                           #
+#     PLAYER_dir == DIR_RIGHT -> desenho normal      (a7 = 0)          #
+#     PLAYER_dir == DIR_LEFT  -> desenho espelhado   (a7 = 2)          #
+#  O flip e feito em tempo de execucao pelo RENDER_SPRITE (modo a7=2,  #
+#  le a linha de tras pra frente). Nao duplicamos sprites no .data:    #
+#  seriam +42KB de dados (~178KB de texto fonte) e o artista teria que #
+#  gerar cada frame futuro duas vezes.                                 #
+#                                                                      #
+#  O espelhamento NAO afeta a posicao: o offset de centralizacao       #
+#  (ANIM_OFF_*) e simetrico por construcao -- o corpo esta centralizado #
+#  no canvas, entao espelhar em torno do centro do canvas mantem a     #
+#  caixa de colisao 32x48 alinhada com o desenho.                      #
+#                                                                      #
 #  ---------------- CULL COM FALLBACK -------------------------------  #
 #  RENDER_SPRITE nao tem crop de borda: sprite parcialmente fora faz   #
 #  wrap de linha (lixo) ou endereco invalido (crash). Sprite que nao   #
@@ -145,7 +161,15 @@ RP_CULL_Y:
                                  # labels separados (a tabela escolhe o
                                  # endereco); a6!=0 deslocaria o endereco
                                  # por status*W*H e leria lixo.
+
+    # Espelhamento: sprites do artista olham p/ a DIREITA. Andando p/ a
+    # esquerda, pede o modo 2 (flip horizontal) do RENDER_SPRITE.
     li   a7, 0                   # print normal (nao cropped)
+    lw   t2, PLAYER_dir(t0)
+    li   t3, DIR_LEFT
+    bne  t2, t3, RP_DRAW
+    li   a7, 2                   # DIR_LEFT -> desenho espelhado
+RP_DRAW:
 
     call RENDER_SPRITE           # rotina standalone (render_sprite.s)
 

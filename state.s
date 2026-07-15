@@ -446,10 +446,17 @@ BUSTER_SPRITE:
 # --- tipos de inimigo --- #
 .eqv ENT_FLYER   0   # voador (caveira): persegue em X e Y
 .eqv ENT_RUNNER  1   # corredor (camera): persegue so em X, preso ao chao
+.eqv ENT_BOSS    2   # chefao (req 8): FSM propria em boss.s, cinematico
+                     #   (ENEMY_UPDATE e o resolve de mapa PULAM este tipo)
 
 # --- estados da FSM --- #
 .eqv ENF_IDLE     0  # parado (nao avistou o player)
 .eqv ENF_SPOTTED  1  # avistou: persegue
+# ---- Estados de FSM do CHEFAO (mesmo campo EN_fsm; valores disjuntos -- #
+# ---- dos ENF_* porque o tipo ja separa os automatos) ------------------ #
+.eqv BF_TRACK     2  # no canto: persegue o Y-alvo (player ou fixo)
+.eqv BF_AIM       3  # mira travada: telegrafa parado (sprite PREPARE)
+.eqv BF_DASH      4  # varredura horizontal ate a parede oposta
 
 # --- parametros de comportamento --- #
 .eqv EN_SIGHT_RADIUS  60    # era 120
@@ -481,6 +488,45 @@ BUSTER_SPRITE:
 #     Sao os botoes de balanceamento: suba p/ deixar mais punitivo.
 .eqv EN_FLYER_DMG      4
 .eqv EN_RUNNER_DMG     6
+
+# ---- Chefao (req 8, 3o tipo; padrao "Savage Beastfly") -------------- #
+# Arena = Map_BOSS 20x15 (medida da matriz em data.s): paredes nas
+# colunas 0/19, chao na linha 14 (topo em y=224), teto irregular so nas
+# linhas 0-4. Interior util p/ um corpo 64x64:
+.eqv BOSS_W        64
+.eqv BOSS_H        64
+.eqv BOSS_HP       20   # buster da 1/hit -> 20 tiros
+.eqv BOSS_DMG      8    # contato: pior que o corredor (6) -- e o chefe
+.eqv BOSS_X_LEFT   16   # parede esq (col 0 solida)
+.eqv BOSS_X_RIGHT  240  # 304 (parede dir) - 64 de largura
+.eqv BOSS_Y_MIN    80   # abaixo das saliencias do teto (linhas 0-4)
+.eqv BOSS_Y_MAX    160  # 224 (topo do chao) - 64 de altura
+.eqv BOSS_GROUND_Y 160  # passada rasteira: barriga no chao (pula por cima)
+.eqv BOSS_HIGH_Y   104  # passada alta: base em 168 < 176 (cabeca do player
+                        #   em pe) -> passa por cima com 8px de folga
+.eqv BOSS_TRACK_FRAMES 40  # ~2s de perseguicao do alvo Y antes de mirar
+.eqv BOSS_AIM_FRAMES   16  # ~0.8s de telegraph parado (janela de leitura)
+.eqv BOSS_SPAWN_X  240  # nasce encostado na parede direita...
+.eqv BOSS_SPAWN_Y  104  # ...a meia altura
+# velocidades (float: o movimento do boss e cinematico, sem PHYSICS_STEP)
+BOSS_TRACK_SPD: .float 2.0    # px/frame no eixo Y durante o TRACK
+BOSS_DASH_SPD:  .float 10.0   # px/frame na varredura (~26 frames a arena)
+
+# ---- Estado extra do chefao (1 so boss -> struct dedicada) ---------- #
+# O slot do pool guarda o generico (pos/hp/fsm/dir); aqui fica o que so
+# o chefao tem: em qual passo do padrao ele esta e o Y-alvo travado.
+.eqv BS_step     0   # word: passo do padrao 0..3
+                     #   0 = tracking do Y do player  (ataque 1 do concept)
+                     #   1 = rente ao chao            (ataque 2, varredura 1)
+                     #   2 = por cima do player       (ataque 2, varredura 2)
+                     #   3 = rente ao chao de novo    (ataque 2, varredura 3)
+.eqv BS_timer    4   # word: frames restantes do estado atual (TRACK/AIM)
+.eqv BS_target_y 8   # word: Y-alvo (int) sendo perseguido/travado
+.align 2
+BOSS_STATE:
+    .word 0   # BS_step
+    .word 0   # BS_timer
+    .word 0   # BS_target_y
 
 # --- limites de visibilidade na tela (hoje = coords de tela, tp=0) --- #
 # Quando o scroll entrar, SCREEN_LEFT vira a posicao X da camera.
@@ -594,40 +640,40 @@ ITEM_POOL:
 #  HEAL = cruz verde (indice 28). CHARGE = losango ciano (indice 31).  #
 # ------------------------------------------------------------------- #
 ITEM_HEAL_SPRITE:
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
-    .byte 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
-    .byte 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
-    .byte 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9
+    .byte  9, 98, 116, 116, 116, 116, 116, 116, 116, 116, 116, 126, 126, 116, 126,  9
+    .byte  9, 98, 116, 116, 116, 116, 126, 126, 126, 126, 116, 116, 116, 116, 116,  9
+    .byte  9, 98, 116, 116, 116, 116, 126, 126, 126, 126, 116, 116, 116, 116, 126,  9
+    .byte  9, 98, 116, 116, 116, 98, 126, 126, 126, 126, 98, 116, 116, 116, 116,  9
+    .byte  9, 98, 116, 116, 98, 98, 126, 126, 126, 126, 98, 98, 116, 116, 116,  9
+    .byte  9, 98, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 116,  9
+    .byte  9, 98, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 116,  9
+    .byte  9, 98, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 116,  9
+    .byte  9, 98, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 126, 116,  9
+    .byte  9, 98, 116, 116, 98, 98, 126, 126, 126, 126, 98, 98, 116, 116, 116,  9
+    .byte  9, 98, 116, 116, 116, 98, 126, 126, 126, 126, 98, 116, 116, 116, 116,  9
+    .byte  9, 98, 116, 116, 116, 116, 126, 126, 126, 126, 116, 116, 116, 116, 116,  9
+    .byte  9, 98, 116, 116, 116, 116, 126, 126, 126, 126, 116, 116, 116, 116, 116,  9
+    .byte  9, 98, 98, 98, 98, 98, 98, 98, 98, 98, 98, 98, 98, 98, 98,  9
+    .byte  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9
 
 ITEM_CHARGE_SPRITE:
-    .byte  0, 0, 0, 0, 0, 0, 0,31,31, 0, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,31,31,31,31, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0,31,31,31,31,31,31, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0,31,31,31,31,31,31,31,31, 0, 0, 0, 0
-    .byte  0, 0, 0,31,31,31,31,31,31,31,31,31,31, 0, 0, 0
-    .byte  0, 0,31,31,31,31,31,31,31,31,31,31,31,31, 0, 0
-    .byte  0,31,31,31,31,31,31,31,31,31,31,31,31,31,31, 0
-    .byte 31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31
-    .byte 31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31
-    .byte  0,31,31,31,31,31,31,31,31,31,31,31,31,31,31, 0
-    .byte  0, 0,31,31,31,31,31,31,31,31,31,31,31,31, 0, 0
-    .byte  0, 0, 0,31,31,31,31,31,31,31,31,31,31, 0, 0, 0
-    .byte  0, 0, 0, 0,31,31,31,31,31,31,31,31, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0,31,31,31,31,31,31, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0,31,31,31,31, 0, 0, 0, 0, 0, 0
-    .byte  0, 0, 0, 0, 0, 0, 0,31,31, 0, 0, 0, 0, 0, 0, 0
+    .byte  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9
+    .byte  9, 94, 111, 111, 111, 111, 111, 111, 111, 111, 111, 183, 183, 111, 183,  9
+    .byte  9, 94, 111, 111, 111, 111, 183, 183, 183, 183, 111, 111, 111, 111, 111,  9
+    .byte  9, 94, 111, 111, 111, 111, 183, 183, 183, 183, 111, 111, 111, 111, 183,  9
+    .byte  9, 94, 111, 111, 111, 94, 183, 183, 183, 183, 94, 111, 111, 111, 111,  9
+    .byte  9, 94, 111, 111, 94, 94, 183, 183, 183, 183, 94, 94, 111, 111, 111,  9
+    .byte  9, 94, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 111,  9
+    .byte  9, 94, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 111,  9
+    .byte  9, 94, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 111,  9
+    .byte  9, 94, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 183, 111,  9
+    .byte  9, 94, 111, 111, 94, 94, 183, 183, 183, 183, 94, 94, 111, 111, 111,  9
+    .byte  9, 94, 111, 111, 111, 94, 183, 183, 183, 183, 94, 111, 111, 111, 111,  9
+    .byte  9, 94, 111, 111, 111, 111, 183, 183, 183, 183, 111, 111, 111, 111, 111,  9
+    .byte  9, 94, 111, 111, 111, 111, 183, 183, 183, 183, 111, 111, 111, 111, 111,  9
+    .byte  9, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94,  9
+    .byte  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9
 
 # ==================================================================== #
 #  DOOR_SPRITE -- PLACEHOLDER da porta de transicao (req 7)            #

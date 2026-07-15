@@ -118,6 +118,9 @@ ENEMY_UPDATE:
 EU_LOOP:
     lw   t0, EN_active(s0)
     beqz t0, EU_NEXT           # slot livre: pula
+    lw   t0, EN_type(s0)
+    li   t1, ENT_BOSS
+    beq  t0, t1, EU_NEXT       # chefao: FSM propria (boss.s), cinematico
 
     # ---- Distancia ao player (dx, dy em float) -------------------- #
     flw  ft0, PH_x(s0)         # enemy.x

@@ -239,8 +239,12 @@ CU_PLAYER_MAP:
 CU_EN_LOOP:
     lw   t0, EN_active(s0)
     beqz t0, CU_EN_NEXT
-    mv   a0, s0
     lw   t1, EN_type(s0)
+    li   t2, ENT_BOSS
+    beq  t1, t2, CU_EN_NEXT        # chefao e cinematico (boss.s): gravidade
+                                   # o derrubaria do voo e o snap de tile
+                                   # quebraria a varredura -- nao resolve
+    mv   a0, s0
     li   t2, ENT_FLYER
     li   a1, EN_FLYER_W
     li   a2, EN_FLYER_H
@@ -280,14 +284,19 @@ CU_PE_LOOP:
     fcvt.w.s t4, ft0               # t4 = inimigo x
     flw  ft1, PH_y(s2)
     fcvt.w.s t5, ft1               # t5 = inimigo y
-    lw   t0, EN_type(s2)           # altura por tipo (largura 32 p/ ambos)
+    lw   t0, EN_type(s2)           # CAIXA por tipo: altura em t6, LARGURA
+    li   a7, 32                    # em a7 (32 p/ voador/corredor, 64 boss)
     li   t6, EN_FLYER_H
     li   a6, ENT_FLYER
     beq  t0, a6, CU_PE_BOX
     li   t6, EN_RUNNER_H
+    li   a6, ENT_BOSS
+    bne  t0, a6, CU_PE_BOX
+    li   t6, BOSS_H                # chefao: 64x64
+    li   a7, BOSS_W
 CU_PE_BOX:
-    # sobreposicao X: proj(t1,8) vs inimigo(t4,32)
-    addi a6, t4, 32
+    # sobreposicao X: proj(t1,8) vs inimigo(t4,a7)
+    add  a6, t4, a7
     bge  t1, a6, CU_PE_NEXT        # proj a direita do inimigo
     addi a6, t1, PROJ_W
     bge  t4, a6, CU_PE_NEXT        # inimigo a direita do proj
@@ -303,6 +312,20 @@ CU_PE_BOX:
     sw   a6, EN_hp(s2)
     bgtz a6, CU_PE_HIT_SFX         # sobreviveu: som de "acertei" e segue
     sw   zero, EN_active(s2)       # morreu: libera o slot
+    # CHEFAO morto = VITORIA (req 8 fecha o jogo): a condicao de vitoria
+    # e esta -- nao ha mais gatilho de area na arena (level.s). A cena
+    # WIN troca a musica sozinha (MUSIC_SELECT) e o gameloop passa a
+    # rodar so a tela preta de vitoria.
+    lw   a6, EN_type(s2)
+    li   t0, ENT_BOSS
+    bne  a6, t0, CU_PE_DROP
+    la   t0, GAME_STATE
+    li   a6, SCENE_WIN
+    sw   a6, GS_scene(t0)
+    li   a0, SFX_ENEMY_DEATH       # placeholder ate ter SFX_BOSS_DEATH
+    call SFX_PLAY
+    j    CU_PR_NEXT                # boss nao dropa item
+CU_PE_DROP:
     # dropa item de cura/recarga no centro da caixa do inimigo (req 6).
     # t4/t5 ainda tem x/y do inimigo, t6 a altura por tipo (setados no
     # topo do CU_PE_LOOP); largura e sempre 32 (EN_FLYER_W==EN_RUNNER_W).
@@ -348,13 +371,18 @@ CU_PL_LOOP:
     flw  ft1, PH_y(s0)
     fcvt.w.s t4, ft1               # t4 = inimigo y
     lw   t5, EN_type(s0)
+    li   a7, 32                    # largura por tipo (boss = 64)
     li   t6, EN_FLYER_H
     li   a6, ENT_FLYER
     beq  t5, a6, CU_PL_BOX
     li   t6, EN_RUNNER_H
+    li   a6, ENT_BOSS
+    bne  t5, a6, CU_PL_BOX
+    li   t6, BOSS_H
+    li   a7, BOSS_W
 CU_PL_BOX:
-    # sobreposicao: player(t1,t2,32,48) vs inimigo(t3,t4,32,t6)
-    addi a6, t3, 32
+    # sobreposicao: player(t1,t2,32,48) vs inimigo(t3,t4,a7,t6)
+    add  a6, t3, a7
     bge  t1, a6, CU_PL_NEXT
     addi a6, t1, PLAYER_W
     bge  t3, a6, CU_PL_NEXT
@@ -368,6 +396,9 @@ CU_PL_BOX:
     li   t3, EN_FLYER_DMG
     beq  t5, a6, CU_PL_DMG
     li   t3, EN_RUNNER_DMG
+    li   a6, ENT_BOSS
+    bne  t5, a6, CU_PL_DMG
+    li   t3, BOSS_DMG              # varredura do chefao: o pior contato
 CU_PL_DMG:
     la   t5, PLAYER
     lw   t6, PLAYER_health(t5)

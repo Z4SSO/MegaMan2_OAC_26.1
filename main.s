@@ -63,6 +63,7 @@ main:
 .include "attack.s"            # ATTACK_UPDATE (tiros do Buster, req 2)
 .include "render_entities.s"   # RENDER_ENTITIES (desenha projeteis/inimigos)
 .include "enemies.s"
+.include "boss.s"              # BOSS_SPAWN / BOSS_UPDATE (chefao, req 8)
 .include "items.s"             # ITEM_DROP / ITEM_PICKUP_UPDATE (cura/recarga, req 6)
 .include "collision.s"         # COLLISION_UPDATE (mapa, dano, tiro x inimigo, itens)
 .include "level.s"             # DOOR_UPDATE / TRANSITION_UPDATE / LEVEL_ENTER_* (req 7)

@@ -70,6 +70,8 @@ RE_NEXT:
     #   VOADOR  : IDLE -> EN2_IDLE parado; SPOTTED -> EN2_A1..6 (asas)
     #   CORREDOR: IDLE -> EN1_IDLE parado; SPOTTED -> EN1_RUN1..3
     # A troca parado/animando tambem e feedback de aggro pro jogador.
+    # Espelhamento por EN_dir: o corredor persegue nos dois sentidos, e
+    # sem flip ele correria de costas metade do tempo.
     #
     # ALINHAMENTO: a caixa de colisao NAO muda (voador 32x32, corredor
     # 32x48). Frames RUN do corredor tem canvas 64 de largura com o
@@ -84,6 +86,8 @@ RE_EN_LOOP:
     beqz t0, RE_EN_NEXT
 
     lw   t0, EN_type(s0)
+    li   t1, ENT_BOSS
+    beq  t0, t1, RE_EN_BOSS
     li   t1, ENT_FLYER
     bne  t0, t1, RE_EN_RUNNER
 
@@ -91,6 +95,7 @@ RE_EN_LOOP:
     li   a3, EN_FLYER_W
     li   a4, EN_FLYER_H
     li   t4, 0                  # offset X: nenhum
+    li   t5, DIR_LEFT           # arte olha p/ DIREITA: espelha indo p/ esq
     lw   t1, EN_fsm(s0)
     li   t2, ENF_SPOTTED
     beq  t1, t2, RE_EN2_FLYANIM
@@ -112,6 +117,7 @@ RE_EN_RUNNER:
     li   a3, EN_RUNNER_W        # 32 (caso idle; sobrescrito se correndo)
     li   a4, EN_RUNNER_H
     li   t4, 0
+    li   t5, DIR_LEFT           # arte olha p/ DIREITA: espelha indo p/ esq
     lw   t1, EN_fsm(s0)
     li   t2, ENF_SPOTTED
     beq  t1, t2, RE_EN1_RUNANIM
@@ -128,6 +134,33 @@ RE_EN1_RUNANIM:
     lw   a0, 0(t2)              # a0 = EN1_RUN<n> (64x48)
     li   a3, 64
     li   t4, ANIM_OFF_64        # centraliza o canvas de 64 na hitbox de 32
+    j    RE_EN_DRAW              # (fix) sem isso, cai no bloco do CHEFAO abaixo
+
+    # ---- CHEFAO (64x64, canvas == hitbox, offset 0) ------------------ #
+    # Sprite mapeado pelo ESTADO da FSM (boss.s):
+    #   BF_TRACK -> BOSS_IDLE (pairando/ajustando altura)
+    #   BF_AIM   -> BOSS_PREPARE (telegraph da varredura)
+    #   BF_DASH  -> BOSS_ATTACK (corpo hidrodinamico do dash)
+    # ATENCAO ao facing: a arte do boss olha p/ a ESQUERDA (olhos a
+    # esquerda no BOSS_ATTACK, como no concept) -- o CONTRARIO dos
+    # outros sprites. Logo espelha quando EN_dir == DIR_RIGHT.
+RE_EN_BOSS:
+    li   a3, BOSS_W
+    li   a4, BOSS_H
+    li   t4, 0                  # canvas == hitbox: sem offset
+    li   t5, DIR_RIGHT          # arte olha p/ ESQUERDA: espelha indo p/ dir
+    lw   t1, EN_fsm(s0)
+    li   t2, BF_AIM
+    beq  t1, t2, RE_EN_BOSS_PREP
+    li   t2, BF_DASH
+    beq  t1, t2, RE_EN_BOSS_ATK
+    la   a0, BOSS_IDLE          # BF_TRACK (e qualquer estado inesperado)
+    j    RE_EN_DRAW
+RE_EN_BOSS_PREP:
+    la   a0, BOSS_PREPARE
+    j    RE_EN_DRAW
+RE_EN_BOSS_ATK:
+    la   a0, BOSS_ATTACK
 
 RE_EN_DRAW:
     flw  ft0, PH_x(s0)
@@ -166,7 +199,16 @@ RE_EN_CULL_Y:
     la   t0, GAME_STATE
     lw   a5, GS_frame(t0)       # frame destino (double buffering)
     li   a6, 0                  # frames sao labels separados: a6 fica 0
+
+    # Espelhamento (req 3): os sprites do artista olham p/ a DIREITA;
+    # EN_dir (mantido pelo enemies.s, aponta p/ o player quando SPOTTED)
+    # decide o flip. Modo 2 = RENDER_SPRITE espelha a leitura da linha.
+    # s0 (cursor do pool) sobrevive: e callee-saved.
     li   a7, 0
+    lw   t1, EN_dir(s0)
+    bne  t1, t5, RE_EN_DO_DRAW  # t5 = dir que exige espelho (por tipo:
+    li   a7, 2                  # DIR_LEFT nos normais, DIR_RIGHT no boss)
+RE_EN_DO_DRAW:
     call RENDER_SPRITE
 
 RE_EN_NEXT:
@@ -237,13 +279,10 @@ RE_DOOR_CHK_W2:
     li   a4, DOOR_H
     j    RE_DOOR_DRAW
 RE_DOOR_CHK_BOSS:
-    li   t1, LEVEL_BOSS
-    bne  t0, t1, RE_END          # fase desconhecida: nada a desenhar
-    la   a0, WIN_MARKER_SPRITE
-    li   a1, WIN_TRIGGER_X
-    li   a2, WIN_TRIGGER_Y
-    li   a3, 16                  # WIN_MARKER_SPRITE e 16x16 (so um marcador)
-    li   a4, 16
+    # LEVEL_BOSS (ou fase desconhecida): nada estatico a desenhar -- o
+    # marcador X de vitoria saiu; quem mora na arena agora e o CHEFAO,
+    # desenhado na 2a passada como qualquer inimigo do pool.
+    j    RE_END
 
 RE_DOOR_DRAW:
     # a1/a2 chegam em coordenadas de MUNDO -> converte p/ tela e cull,

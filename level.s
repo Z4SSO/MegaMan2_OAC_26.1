@@ -59,8 +59,7 @@ DOOR_UPDATE:
     beq  t1, t2, DU_DOOR_W1
     li   t2, LEVEL_W2
     beq  t1, t2, DU_DOOR_W2
-    li   t2, LEVEL_BOSS
-    beq  t1, t2, DU_WIN_CHECK
+    # LEVEL_BOSS: sem porta/gatilho aqui -- vitoria so pela morte do boss (collision.s)
     j    DU_END                # GS_level desconhecido: nao faz nada (defensivo)
 
 DU_DOOR_W1:
@@ -84,19 +83,6 @@ DU_DOOR_W2:
     li   a0, LEVEL_BOSS
     call DU_ARM_TRANSITION
     j    DU_END
-
-DU_WIN_CHECK:
-    li   a1, WIN_TRIGGER_X
-    li   a2, WIN_TRIGGER_Y
-    li   a3, WIN_TRIGGER_W
-    li   a4, WIN_TRIGGER_H
-    call DU_PLAYER_HITS_RECT
-    beqz a0, DU_END
-    # Placeholder: sem luta de chefe ainda, entao a "vitoria" e instantanea
-    # (sem tela preta) -- e cena terminal, nao precisa da transicao fluida.
-    la   t0, GAME_STATE
-    li   t2, SCENE_WIN
-    sw   t2, GS_scene(t0)       # MUSIC_SELECT ja troca p/ MUS_VITORIA sozinho
 
 DU_END:
     lw   ra, 0(sp)
@@ -226,6 +212,7 @@ LEVEL_ENTER_BOSS:
     li   a3, LEVEL_BOSS
     li   a4, MUS_CHEFAO
     call LEVEL_ENTER_COMMON
+    call BOSS_SPAWN            # (fix) faltava spawnar o chefao no pool
     lw   ra, 0(sp)
     addi sp, sp, 4
     ret
