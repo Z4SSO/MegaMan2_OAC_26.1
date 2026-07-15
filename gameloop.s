@@ -71,6 +71,10 @@ GAME_LOOP:
 GL_MENU_FLOW:
     call MENU_UPDATE        # pode trocar a cena p/ SCENE_GAME (LEVEL_ENTER_W1)
     call RENDER_BLACKSCREEN
+#    la a0, SCREEN_START
+#    la   t0, GAME_STATE
+#    lw   a5, GS_frame(t0)
+#    call RENDER_CUSTOM
     call MUSIC_SELECT        # forca MUS_INICIO enquanto SCENE_MENU
     call MUSIC_LOOP
     j    GL_FRAME_END
@@ -184,9 +188,6 @@ GL_FRAME_END:
 # -------------------------------------------------------------------- #
 # RENDER_HUD -> implementado em render_hud.s
 # -------------------------------------------------------------------- #
-#  SFX_UPDATE                                                          #
-#  Dispara efeitos sonoros pendentes (tiro, dano, item). Req 1.        #
-#  TODO: fila de sfx; tocar via ecall MIDI num canal reservado.        #
 # -------------------------------------------------------------------- #
-SFX_UPDATE:
-    ret
+#  SFX_UPDATE -> implementado em sfx.s                                 #
+# -------------------------------------------------------------------- #

@@ -32,13 +32,15 @@
 .text
 
 # ==================================================================== #
-#  ENEMY_SPAWN_INIT  --  semeia inimigos de teste no boot.             #
-#  Chamado UMA vez pelo main (antes de SETUP). Cria 1 voador e 1       #
-#  corredor em posicoes fixas. Depois isso pode virar spawn por mapa   #
-#  (ler posicoes de uma tabela em data.s, estilo Metroid).             #
+#  ENEMY_SPAWN_INIT_W1 / ENEMY_SPAWN_INIT_W2  --  povoam o ENEMY_POOL  #
+#  com os inimigos de cada fase (chamadas por LEVEL_ENTER_W1/W2 em     #
+#  level.s). Cada uma preenche os EN_MAX(8) slots do pool, intercalando#
+#  VOADOR/CORREDOR e espalhando-os ao longo do mapa (o mapa W1 tem 150 #
+#  tiles / 2400px, o W2 tem 110 tiles / 1760px -- ver DOOR_W1_X/DOOR_W2_X#
+#  em state.s), pra nao ficar tudo empilhado perto do spawn do player. #
 #  Helper interno EN_INIT_SLOT preenche um slot com defaults sensatos. #
 # ==================================================================== #
-ENEMY_SPAWN_INIT:
+ENEMY_SPAWN_INIT_W1:
     addi sp, sp, -4
     sw   ra, 0(sp)
 
@@ -61,6 +63,155 @@ ENEMY_SPAWN_INIT:
     li   t4, EN_RUNNER_HP
     li   t5, EN_RUNNER_VMAX    # vx_max
     li   t6, EN_VYMAX_FALL     # vy_max alto (cobre a queda)
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 2: CORREDOR em (520, 160) ---------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_RUNNER
+    li   t2, 520
+    li   t3, 160
+    li   t4, EN_RUNNER_HP
+    li   t5, EN_RUNNER_VMAX
+    li   t6, EN_VYMAX_FALL
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 3: VOADOR em (680, 64) -------------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_FLYER
+    li   t2, 680
+    li   t3, 64
+    li   t4, EN_FLYER_HP
+    li   t5, EN_FLYER_VMAX
+    li   t6, EN_VYMAX_FLY
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 4: CORREDOR em (900, 144) ----------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_RUNNER
+    li   t2, 900
+    li   t3, 144
+    li   t4, EN_RUNNER_HP
+    li   t5, EN_RUNNER_VMAX
+    li   t6, EN_VYMAX_FALL
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 5: VOADOR em (1150, 48) -------------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_FLYER
+    li   t2, 1150
+    li   t3, 48
+    li   t4, EN_FLYER_HP
+    li   t5, EN_FLYER_VMAX
+    li   t6, EN_VYMAX_FLY
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 6: CORREDOR em (1400, 160) ------------------------------ #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_RUNNER
+    li   t2, 1400
+    li   t3, 160
+    li   t4, EN_RUNNER_HP
+    li   t5, EN_RUNNER_VMAX
+    li   t6, EN_VYMAX_FALL
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 7: VOADOR em (1750, 56) ---------------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_FLYER
+    li   t2, 1750
+    li   t3, 56
+    li   t4, EN_FLYER_HP
+    li   t5, EN_FLYER_VMAX
+    li   t6, EN_VYMAX_FLY
+    jal  EN_INIT_SLOT
+
+    lw   ra, 0(sp)
+    addi sp, sp, 4
+    ret
+
+ENEMY_SPAWN_INIT_W2:
+    addi sp, sp, -4
+    sw   ra, 0(sp)
+
+    la   t0, ENEMY_POOL
+
+    # ---- Slot 0: VOADOR em (300, 48) -------------------------------- #
+    li   t1, ENT_FLYER
+    li   t2, 300
+    li   t3, 48
+    li   t4, EN_FLYER_HP
+    li   t5, EN_FLYER_VMAX
+    li   t6, EN_VYMAX_FLY
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 1: CORREDOR em (420, 144) ------------------------------ #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_RUNNER
+    li   t2, 420
+    li   t3, 144
+    li   t4, EN_RUNNER_HP
+    li   t5, EN_RUNNER_VMAX
+    li   t6, EN_VYMAX_FALL
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 2: VOADOR em (650, 64) --------------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_FLYER
+    li   t2, 650
+    li   t3, 64
+    li   t4, EN_FLYER_HP
+    li   t5, EN_FLYER_VMAX
+    li   t6, EN_VYMAX_FLY
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 3: CORREDOR em (800, 152) ------------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_RUNNER
+    li   t2, 800
+    li   t3, 152
+    li   t4, EN_RUNNER_HP
+    li   t5, EN_RUNNER_VMAX
+    li   t6, EN_VYMAX_FALL
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 4: VOADOR em (1000, 56) ---------------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_FLYER
+    li   t2, 1000
+    li   t3, 56
+    li   t4, EN_FLYER_HP
+    li   t5, EN_FLYER_VMAX
+    li   t6, EN_VYMAX_FLY
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 5: CORREDOR em (1150, 144) --------------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_RUNNER
+    li   t2, 1150
+    li   t3, 144
+    li   t4, EN_RUNNER_HP
+    li   t5, EN_RUNNER_VMAX
+    li   t6, EN_VYMAX_FALL
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 6: VOADOR em (1300, 72) ------------------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_FLYER
+    li   t2, 1300
+    li   t3, 72
+    li   t4, EN_FLYER_HP
+    li   t5, EN_FLYER_VMAX
+    li   t6, EN_VYMAX_FLY
+    jal  EN_INIT_SLOT
+
+    # ---- Slot 7: CORREDOR em (1450, 160) -------------------------------- #
+    addi t0, t0, EN_STRIDE
+    li   t1, ENT_RUNNER
+    li   t2, 1450
+    li   t3, 160
+    li   t4, EN_RUNNER_HP
+    li   t5, EN_RUNNER_VMAX
+    li   t6, EN_VYMAX_FALL
     jal  EN_INIT_SLOT
 
     lw   ra, 0(sp)

@@ -183,7 +183,7 @@ LEVEL_ENTER_W1:
     li   a3, LEVEL_W1
     li   a4, MUS_ESTAGIO1
     call LEVEL_ENTER_COMMON
-    call ENEMY_SPAWN_INIT       # repovoa os inimigos de teste da fase 1
+    call ENEMY_SPAWN_INIT_W1    # repovoa o pool de inimigos da fase 1
     lw   ra, 0(sp)
     addi sp, sp, 4
     ret
@@ -197,8 +197,7 @@ LEVEL_ENTER_W2:
     li   a3, LEVEL_W2
     li   a4, MUS_ESTAGIO2
     call LEVEL_ENTER_COMMON
-    # (sem ENEMY_SPAWN_INIT: inimigos da 2a fase ainda nao tem posicoes
-    #  definidas -- fica vazia ate essa tabela existir. Ver Pendencias.)
+    call ENEMY_SPAWN_INIT_W2    # repovoa o pool de inimigos da fase 2
     lw   ra, 0(sp)
     addi sp, sp, 4
     ret

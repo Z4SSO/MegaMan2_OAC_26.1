@@ -403,3 +403,87 @@ RENDER_MAP_LOOP:
 		addi sp,sp,20
 	# End of Stack Operations: Return to caller		
 		ret
+		
+#RENDER_CUSTOM:
+#
+#	sw s4,52(sp)
+#	sw s3,48(sp)
+#	sw s2,44(sp)
+#	sw s1,40(sp)
+#	sw a7,36(sp)
+#	sw a6,32(sp)
+#	sw a4,28(sp)
+#	sw a3,24(sp)
+#	sw a2,20(sp)
+#	sw a1,16(sp)
+#	sw a0,12(sp)
+#	sw t2,8(sp)
+#	sw t3,4(sp)
+#	sw tp,0(sp)
+	
+#	mv t0, a0
+#	lw t1, 0(t0)
+#	lw t2, 4(t0)
+#	addi t0, t0, 8
+	
+#	li t3,0xFF0	# t0 = 0xFF0
+#	add t3,t3,a5	# Rendering Address corresponds to 0x0FF0 + frame
+#	slli t3,t3,20	# Shifts 20 bits, making printing adress correct (0xFF00 0000 or 0xFF10 0000) 
+	
+#	add t3,t3,t1	# t0 = 0xFF00 0000 + X or 0xFF10 0000 + X
+	
+#	li t4,320	# t1 = 320
+#	mul t4,t4,t2	# t1 = 320 * Y 
+#	add t3,t3,t4	# t0 = 0xFF00 0000 + X + (Y * 320) or 0xFF10 0000 + X + (Y * 320)
+	
+#	mv s2,zero	# t2 = 0 (Resets line counter)
+#	mv s3,zero	# t3 = 0 (Resets column counter)
+	
+	
+#	RENDER_CUSTOM_LOOP:
+	
+#	addi s4, s2, 1
+#	beq s4, t2, FIM_RENDER_CUSTOM
+	
+#	lw s1,0(t0)
+#	sw s1, 0(t3)
+	
+#	addi s3, s3, 4
+#	li t6, 128
+#	bne s3, t6, CALCULA_ENDERECO_CUSTOM
+#	mv s3, zero
+#	addi s2, s2, 1
+	
+#	CALCULA_ENDERECO_CUSTOM:
+	
+#	li t6, 96
+#	add t6, t6, s3
+#	li t4,320	# t1 = 320
+#	mul t4,t4,s2	# t1 = 320 * Y 
+#	add t6, t6, t4
+#	mv t3, t6
+#	addi t0, t0, 4
+	
+#	j RENDER_CUSTOM_LOOP 
+	
+#	FIM_RENDER_CUSTOM:
+	
+#	lw s4,52(sp)
+#	lw s3,48(sp)
+#	lw s2,44(sp)
+#	lw s1,40(sp)
+#	lw a7,36(sp)
+#	lw a6,32(sp)
+#	lw a4,28(sp)
+#	lw a3,24(sp)
+#	lw a2,20(sp)
+#	lw a1,16(sp)
+#	lw a0,12(sp)
+#	lw t2,8(sp)
+#	lw t3,4(sp)
+#	lw tp,0(sp)
+#	addi sp,sp,56
+	
+#	ret
+
+	
