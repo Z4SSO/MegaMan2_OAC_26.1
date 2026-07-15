@@ -64,45 +64,108 @@ RE_NEXT:
     bnez s1, RE_LOOP
 
     # ================= 2a passada: INIMIGOS ======================== #
+    # [Req 3/8: animacao] Sprite escolhido por TIPO + estado da FSM,
+    # ciclando pelo EN_anim (contador por entidade que enemies.s ja
+    # incrementava sem consumidor -- agora ele e a animacao):
+    #   VOADOR  : IDLE -> EN2_IDLE parado; SPOTTED -> EN2_A1..6 (asas)
+    #   CORREDOR: IDLE -> EN1_IDLE parado; SPOTTED -> EN1_RUN1..3
+    # A troca parado/animando tambem e feedback de aggro pro jogador.
+    #
+    # ALINHAMENTO: a caixa de colisao NAO muda (voador 32x32, corredor
+    # 32x48). Frames RUN do corredor tem canvas 64 de largura com o
+    # corpo centralizado -> draw_x = x_hitbox - ANIM_OFF_64. Se o frame
+    # largo nao couber na tela (cull total, sem crop), cai de volta pro
+    # EN1_IDLE (32) antes de desistir -- senao o corredor sumiria perto
+    # das bordas. Alturas sempre iguais as da hitbox -> draw_y = y.
     la   s0, ENEMY_POOL
     li   s1, EN_MAX
 RE_EN_LOOP:
     lw   t0, EN_active(s0)
     beqz t0, RE_EN_NEXT
 
-    # escolhe o sprite E as dimensoes pelo tipo (voador e corredor tem
-    # tamanhos diferentes: EN2=32x32, EN1=32x48).
     lw   t0, EN_type(s0)
     li   t1, ENT_FLYER
     bne  t0, t1, RE_EN_RUNNER
-    la   a0, EN2_IDLE          # voador (caveira) 32x32
+
+    # ---- VOADOR (32x32, canvas == hitbox, offset 0 sempre) --------- #
     li   a3, EN_FLYER_W
     li   a4, EN_FLYER_H
+    li   t4, 0                  # offset X: nenhum
+    lw   t1, EN_fsm(s0)
+    li   t2, ENF_SPOTTED
+    beq  t1, t2, RE_EN2_FLYANIM
+    la   a0, EN2_IDLE           # parado: caveira estatica
     j    RE_EN_DRAW
+RE_EN2_FLYANIM:
+    lw   t1, EN_anim(s0)        # frame = (EN_anim >> 1) % 6
+    srli t1, t1, 1
+    li   t2, 6
+    remu t1, t1, t2
+    la   t2, EN2_FLY_TABLE
+    slli t1, t1, 2
+    add  t2, t2, t1
+    lw   a0, 0(t2)              # a0 = EN2_A<n>
+    j    RE_EN_DRAW
+
 RE_EN_RUNNER:
-    la   a0, EN1_IDLE          # corredor (camera) 32x48
-    li   a3, EN_RUNNER_W
+    # ---- CORREDOR (hitbox 32x48; RUN em canvas 64x48) --------------- #
+    li   a3, EN_RUNNER_W        # 32 (caso idle; sobrescrito se correndo)
     li   a4, EN_RUNNER_H
+    li   t4, 0
+    lw   t1, EN_fsm(s0)
+    li   t2, ENF_SPOTTED
+    beq  t1, t2, RE_EN1_RUNANIM
+    la   a0, EN1_IDLE           # parado: sprite estatico 32x48
+    j    RE_EN_DRAW
+RE_EN1_RUNANIM:
+    lw   t1, EN_anim(s0)        # frame = (EN_anim >> 1) % 3
+    srli t1, t1, 1
+    li   t2, 3
+    remu t1, t1, t2
+    la   t2, EN1_RUN_TABLE
+    slli t1, t1, 2
+    add  t2, t2, t1
+    lw   a0, 0(t2)              # a0 = EN1_RUN<n> (64x48)
+    li   a3, 64
+    li   t4, ANIM_OFF_64        # centraliza o canvas de 64 na hitbox de 32
+
 RE_EN_DRAW:
     flw  ft0, PH_x(s0)
-    fcvt.w.s a1, ft0            # X de MUNDO (float -> int)
+    fcvt.w.s a1, ft0            # X de MUNDO da HITBOX (float -> int)
     la   t0, GAME_STATE
     lw   t1, GS_cam_x(t0)
-    sub  a1, a1, t1            # X de tela = mundo - cam_x
+    sub  a1, a1, t1            # X da hitbox na tela
+    mv   t6, a1                 # copia p/ o fallback
+    sub  a1, a1, t4             # X de DESENHO (aplica o offset do canvas)
     # CULL: sem crop de borda no RENDER_SPRITE, sprite parcialmente fora
     # (X<0 ou X+W>320) faz wrap de linha = lixo nas bordas. Nao desenha.
-    bltz a1, RE_EN_NEXT        # saiu pela esquerda
+    bltz a1, RE_EN_FALLBACK    # saiu pela esquerda
     li   t2, 320
     sub  t2, t2, a3            # t2 = 320 - largura do sprite
-    bgt  a1, t2, RE_EN_NEXT    # saiu pela direita
+    bgt  a1, t2, RE_EN_FALLBACK # saiu pela direita
+    j    RE_EN_CULL_Y
+
+RE_EN_FALLBACK:
+    # Frame largo nao coube: tenta o IDLE do tipo (canvas == hitbox).
+    # Se o frame ja era sem offset (t4==0), nao ha fallback: pula.
+    beqz t4, RE_EN_NEXT
+    la   a0, EN1_IDLE           # so o corredor tem frames largos hoje
+    li   a3, EN_RUNNER_W
+    mv   a1, t6                 # X da hitbox (offset 0)
+    bltz a1, RE_EN_NEXT
+    li   t2, 288                # 320 - 32
+    bgt  a1, t2, RE_EN_NEXT
+
+RE_EN_CULL_Y:
     flw  ft0, PH_y(s0)
-    fcvt.w.s a2, ft0            # Y (sem scroll vertical)
+    fcvt.w.s a2, ft0            # Y (alturas do canvas == hitbox sempre)
     bltz a2, RE_EN_NEXT         # CULL Y: fora por cima (evita crash)
     li   t2, 240
     sub  t2, t2, a4             # 240 - altura do sprite
     bgt  a2, t2, RE_EN_NEXT     # fora por baixo
+    la   t0, GAME_STATE
     lw   a5, GS_frame(t0)       # frame destino (double buffering)
-    li   a6, 0
+    li   a6, 0                  # frames sao labels separados: a6 fica 0
     li   a7, 0
     call RENDER_SPRITE
 

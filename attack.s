@@ -72,6 +72,11 @@ AU_SPAWN:
     sub  t6, t6, t3                # ajusta p/ top-left do tiro
     sw   t6, PR_y(t0)
 
+    # Arma a pose de tiro do player (animacao, req 3): o render mostra
+    # PLAYER_SHOOT enquanto este timer > 0 (player.s decrementa).
+    li   t3, PLAYER_SHOOT_ANIM_FRAMES
+    sw   t3, PLAYER_shoot_timer(t4)
+
     # Direcao: PLAYER_dir decide vx e a borda de spawn em X
     lw   t3, PLAYER_dir(t4)
     bnez t3, AU_SPAWN_LEFT         # DIR_LEFT = 1

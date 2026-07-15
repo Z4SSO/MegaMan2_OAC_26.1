@@ -252,6 +252,11 @@ GAME_STATE:
 .eqv PLAYER_air_used   68  # word: 1 = ja usou a habilidade aerea nesta queda/pulo
                             #   (zera ao pisar no chao; permite 1 uso por "voo").
 .eqv PLAYER_dash_timer 72  # word: frames restantes do dash em andamento (0 = parado)
+# ---- Animacao do player (req 3) ------------------------------------- #
+.eqv PLAYER_shoot_timer 76 # word: frames restantes da pose de tiro (PLAYER_SHOOT).
+                           #   attack.s arma no spawn do projetil; player.s
+                           #   decrementa; render_player.s mostra a pose enquanto >0.
+.eqv PLAYER_SHOOT_ANIM_FRAMES 6  # duracao da pose de tiro (6 frames a 50ms = 300ms)
 
 # --- Habilidades de movimentacao (req 4): so estas 2, sem ataque extra --- #
 .eqv ABILITY_DOUBLEJUMP  0  # 2o pulo no ar (mesma vy do pulo normal)
@@ -285,6 +290,7 @@ PLAYER:
     .word PLAYER_ABILITY_CHARGE_MAX  # PLAYER_ability_charge_max
     .word 0             # PLAYER_air_used
     .word 0             # PLAYER_dash_timer
+    .word 0             # PLAYER_shoot_timer
 
 # ==================================================================== #
 #  PLAYER_SPRITE  --  PLACEHOLDER 16x16 (256 bytes)                    #
@@ -297,6 +303,52 @@ PLAYER:
 # ==================================================================== #
 .eqv PLAYER_W  32
 .eqv PLAYER_H  48
+
+# ==================================================================== #
+#  ANIMACAO (req 3) -- tabelas de frames + alinhamento sprite/hitbox   #
+#                                                                      #
+#  A caixa de FISICA/COLISAO nunca muda (player 32x48, corredor 32x48, #
+#  voador 32x32). O que muda por frame de animacao e so o CANVAS do    #
+#  sprite: os frames RUN tem 64 de largura e JUMP/SHOOT tem 48, com o  #
+#  personagem centralizado e os pes na base (verificado pixel a pixel  #
+#  nos .data do artista). Logo o render desenha o sprite DESLOCADO:    #
+#     draw_x = x_fisica - (spriteW - hitboxW)/2   (centraliza)          #
+#     draw_y = y_fisica + hitboxH - spriteH       (alinha os pes)       #
+#  Para os sprites atuais spriteH == hitboxH sempre -> draw_y = y.     #
+#  Offsets pre-calculados (o fpgrars nao faz aritmetica de .eqv):      #
+.eqv ANIM_OFF_64 16   # (64-32)/2: frames de 64 de largura (RUN player/EN1)
+.eqv ANIM_OFF_48 8    # (48-32)/2: frames de 48 (PLAYER_JUMP/SHOOT)
+#                                                                      #
+#  Se um frame LARGO nao couber inteiro na tela (cull), o render cai   #
+#  de volta pro IDLE de 32 (que cabe mais vezes) antes de desistir --  #
+#  senao o player/inimigo sumiria a 16px das bordas do mapa.           #
+#                                                                      #
+#  Velocidade da animacao: contador>>1 a 20fps = troca a cada 100ms.   #
+#  Player usa GS_tick; inimigos usam EN_anim (contador por entidade    #
+#  que ja existia em enemies.s e nao era consumido por ninguem).       #
+# ==================================================================== #
+.align 2
+PLAYER_RUN_TABLE:           # 6 frames de corrida, todos 64x48
+    .word PLAYER_RUN1
+    .word PLAYER_RUN2
+    .word PLAYER_RUN3
+    .word PLAYER_RUN4
+    .word PLAYER_RUN5
+    .word PLAYER_RUN6
+EN1_RUN_TABLE:              # corredor: 3 frames de corrida, todos 64x48
+    .word EN1_RUN1
+    .word EN1_RUN2
+    .word EN1_RUN3
+EN2_FLY_TABLE:              # voador: 6 frames de voo, todos 32x32
+    .word EN2_A1
+    .word EN2_A2
+    .word EN2_A3
+    .word EN2_A4
+    .word EN2_A5
+    .word EN2_A6
+# limiar de |vx| p/ considerar o player "correndo" (senao friccao
+# residual manteria a animacao de corrida apos soltar a tecla)
+PANIM_VX_MIN: .float 0.5
 PLAYER_SPRITE:
     .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40
     .byte 40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40

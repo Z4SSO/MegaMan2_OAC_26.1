@@ -32,6 +32,16 @@ PLAYER_UPDATE:
     lw   t1, GS_input_bits(t0)   # t1 = teclas ativas neste frame
     la   t0, PLAYER              # t0 = base do player (= base do bloco PH_*)
 
+    # ---- tick do timer da pose de tiro (animacao, req 3) ----------- #
+    # Fica ANTES do desvio do dash pra decrementar em todo frame,
+    # inclusive durante o dash (o ATTACK_UPDATE roda separado e pode
+    # ter armado a pose no frame anterior).
+    lw   t2, PLAYER_shoot_timer(t0)
+    beqz t2, PU_SHOOT_TMR_OK
+    addi t2, t2, -1
+    sw   t2, PLAYER_shoot_timer(t0)
+PU_SHOOT_TMR_OK:
+
     # =============== 0. Dash em andamento? (habilidade DASH) ======== #
     # Enquanto PLAYER_dash_timer > 0 o dash e INTERROMPIVEL: ignora todo
     # o controle normal (esquerda/direita/pulo), trava ax=ay=0 e vy=0 pra
