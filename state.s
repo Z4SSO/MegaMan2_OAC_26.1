@@ -22,10 +22,58 @@
 # passo 2 do GAME_LOOP para reativar.
 
 # -------------------- Constantes de cena ---------------------------- #
-.eqv SCENE_MENU      0
-.eqv SCENE_GAME      1
-.eqv SCENE_GAMEOVER  2
-.eqv SCENE_WIN       3
+.eqv SCENE_MENU        0
+.eqv SCENE_GAME        1
+.eqv SCENE_GAMEOVER    2
+.eqv SCENE_WIN         3
+.eqv SCENE_TRANSITION  4  # tela preta breve entre 2 mapas (porta), ver level.s
+
+# -------------------- Fases (GS_level) ------------------------------- #
+# Identifica qual mapa/fase esta ativa. Usado por DOOR_UPDATE (level.s)
+# para saber qual porta checar, e por CAMERA_UPDATE nao usa isto (le a
+# largura direto do CURRENT_MAP) -- so quem precisa SABER "em que fase
+# estou" (door/musica) usa GS_level.
+.eqv LEVEL_W1    0   # 1a area jogavel (Map_W1)
+.eqv LEVEL_W2    1   # 2a area jogavel (Map_W2)
+.eqv LEVEL_BOSS  2   # arena do chefe (Map_BOSS)
+
+# -------------------- Transicao de fase (porta) ----------------------- #
+# DOOR_UPDATE (level.s) so ARMA a transicao (cena vira SCENE_TRANSITION);
+# TRANSITION_UPDATE (level.s) conta os frames e so troca de mapa de fato
+# quando o timer zera -- da a "tela preta" fluida do MegaMan em vez de
+# um corte seco. TRANSITION_DURATION em frames (frame_rate=50ms/frame).
+.eqv TRANSITION_DURATION  30   # ~1.5s de tela preta na transicao
+
+# Porta = retangulo de gatilho do tamanho do player (32x48), estatico por
+# fase (SEM sprite real ainda -- ver DOOR_SPRITE abaixo). Posicoes
+# escolhidas a partir da matriz do mapa (chao solido mais proximo do fim
+# de cada fase) -- AJUSTAR apos testar no jogo real se nao bater com o
+# chao visualmente (o levantamento foi feito lendo data.s, nao jogando).
+.eqv DOOR_W   32
+.eqv DOOR_H   48
+.eqv DOOR_W1_X  2320   # fim do Map_W1 (150 tiles): coluna ~145, chao solido na linha 14 (y=224)
+.eqv DOOR_W1_Y  176    # 224 (chao) - DOOR_H(48)
+.eqv DOOR_W2_X  1600   # fim do Map_W2 (110 tiles): coluna ~100, chao solido na linha 8 (y=128)
+.eqv DOOR_W2_Y  80     # 128 (chao) - DOOR_H(48)
+
+# Gatilho de VITORIA (placeholder do chefe: ainda nao ha luta real, so um
+# ponto arbitrario na arena do boss). Mesma AABB do player. Colocado no
+# canto direito da arena, no chao (Map_BOSS e 20x15, tela inteira, sem
+# scroll -- ver CAM_MAX_X dinamico em camera.s).
+.eqv WIN_TRIGGER_X  272
+.eqv WIN_TRIGGER_Y  176
+.eqv WIN_TRIGGER_W  32
+.eqv WIN_TRIGGER_H  48
+
+# Pontos de spawn do player ao ENTRAR em cada fase (chao solido validado
+# lendo a matriz do mapa em data.s -- mesmo criterio do spawn original
+# do Map_W1 no handoff).
+.eqv SPAWN_W1_X    80
+.eqv SPAWN_W1_Y    144
+.eqv SPAWN_W2_X    48
+.eqv SPAWN_W2_Y    128
+.eqv SPAWN_BOSS_X  48
+.eqv SPAWN_BOSS_Y  176
 
 # ---- Ids de musica (indices no MUSIC_TABLE de music_data.s) -------- #
 # A ORDEM aqui deve casar com a ordem das entradas no MUSIC_TABLE.
@@ -95,9 +143,13 @@ EN_BRAKE:      .float 0.12   # desaceleracao aplicada quando IDLE (freio)
                         #   O mapa e as entidades sao desenhados deslocados
                         #   de -cam_x. Calculado por CAMERA_UPDATE p/ manter
                         #   o player no centro, travando nas bordas do mapa.
+# ---- Fase / transicao de mapa (porta) ------------------------------- #
+.eqv GS_level               52  # word: fase atual (LEVEL_*). Ver DOOR_UPDATE.
+.eqv GS_transition_timer    56  # word: frames restantes da tela preta (SCENE_TRANSITION)
+.eqv GS_transition_target   60  # word: fase (LEVEL_*) que vai carregar quando o timer zerar
 
 GAME_STATE:
-    .word SCENE_GAME    # GS_scene
+    .word SCENE_MENU    # GS_scene       (comeca na tela inicial mock)
     .word 0             # GS_frame
     .word 0             # GS_frame_time
     .word 0             # GS_input_bits
@@ -110,6 +162,9 @@ GAME_STATE:
     .word MUS_NONE      # GS_music_armed (nada armado -> forca o 1o arme)
     .word 0             # GS_music_cur   (ponteiro nulo ate o 1o MUSIC_SELECT)
     .word 0             # GS_cam_x       (camera comeca em 0 = borda esquerda)
+    .word LEVEL_W1      # GS_level       (default; LEVEL_ENTER_W1 confirma ao sair do menu)
+    .word 0             # GS_transition_timer
+    .word LEVEL_W1      # GS_transition_target
 
 # ==================================================================== #
 #  COMPONENTE DE FISICA (layout compartilhado por TODAS as entidades)  #
@@ -339,8 +394,12 @@ BUSTER_SPRITE:
 .eqv SCREEN_W_PX    320   # largura da tela em pixels
 .eqv CAM_MARGIN     144   # SCREEN_W_PX/2 - PLAYER_W/2 = 160 - 16 = 144
                           #   -> desloc. p/ manter o player centralizado.
-.eqv CAM_MAX_X      2080  # limite direito: map_w(150)*16 - 320 = 2080.
-                          #   (recalcular se a largura do mapa mudar!)
+.eqv CAM_MAX_X      2080  # ORFA desde que passamos a trocar de mapa em tempo
+                          #   real (level.s): camera.s agora calcula o limite
+                          #   dinamicamente a partir do CURRENT_MAP (2080 so
+                          #   valia p/ Map_W1). Pode apagar esta linha na
+                          #   proxima limpeza (ver PHYS_GROUND_Y, mesma classe
+                          #   de sobra do handoff).
 
 .data
 .align 2
@@ -471,3 +530,88 @@ ITEM_CHARGE_SPRITE:
     .byte  0, 0, 0, 0, 0,31,31,31,31,31,31, 0, 0, 0, 0, 0
     .byte  0, 0, 0, 0, 0, 0,31,31,31,31, 0, 0, 0, 0, 0, 0
     .byte  0, 0, 0, 0, 0, 0, 0,31,31, 0, 0, 0, 0, 0, 0, 0
+
+# ==================================================================== #
+#  DOOR_SPRITE -- PLACEHOLDER da porta de transicao (req 7)            #
+#  32x48 (tamanho do player, DOOR_W x DOOR_H), 1 byte/pixel.           #
+#  Ainda NAO ha sprite real (o amigo do grupo vai desenhar; deve virar #
+#  um dos tiles "dummy" do tileset). Por ora: retangulo cor 52 (roxo   #
+#  vivo, destaca do cenario) com moldura escura (cor 0) pra parecer um #
+#  vao/porta em vez de um bloco solido qualquer.                      #
+#  SUBSTITUIR: basta trocar estes .byte por um sprite 32x48 real ou    #
+#  apontar DOOR_SPRITE para o novo .data (mesmo padrao do PLAYER_SPRITE#
+#  quando o sprite do personagem chegou).                              #
+# ==================================================================== #
+DOOR_SPRITE:
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+# ==================================================================== #
+#  WIN_MARKER_SPRITE -- PLACEHOLDER visual do gatilho de vitoria       #
+#  (req 8, ainda sem luta de chefe real). 16x16, cor 63 (amarelo vivo) #
+#  em X pra ficar bem visivel na arena durante o teste. Remover/trocar #
+#  quando o chefao de verdade existir (o gatilho vira "morte do boss").#
+# ==================================================================== #
+WIN_MARKER_SPRITE:
+    .byte 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,63
+    .byte  0,63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,63, 0
+    .byte  0, 0,63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,63, 0, 0
+    .byte  0, 0, 0,63, 0, 0, 0, 0, 0, 0, 0, 0,63, 0, 0, 0
+    .byte  0, 0, 0, 0,63, 0, 0, 0, 0, 0, 0,63, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0,63, 0, 0, 0, 0,63, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,63, 0, 0,63, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0, 0,63,63, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0, 0,63,63, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,63, 0, 0,63, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0,63, 0, 0, 0, 0,63, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0,63, 0, 0, 0, 0, 0, 0,63, 0, 0, 0, 0
+    .byte  0, 0, 0,63, 0, 0, 0, 0, 0, 0, 0, 0,63, 0, 0, 0
+    .byte  0, 0,63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,63, 0, 0
+    .byte  0,63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,63, 0
+    .byte 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,63

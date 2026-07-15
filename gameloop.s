@@ -49,35 +49,75 @@ GAME_LOOP:
     sw   t3, GS_input_prev(t0)
 
 # ==================================================================== #
-#  UPDATE (logica) -- ordem importa                                    #
+#  DESPACHO POR CENA -- decide qual fluxo rodar este frame.            #
+#  MENU/TRANSITION/WIN nao rodam jogo (sem fisica/colisao/inimigos):   #
+#  so tela preta + musica, ate a cena voltar pra SCENE_GAME.            #
+#  GAMEOVER cai no fluxo normal (comportamento pre-existente,          #
+#  intencionalmente inalterado -- ver "Problemas conhecidos" no        #
+#  handoff: o player continua controlavel, so cena+musica mudam).      #
 # ==================================================================== #
+    lw   t1, GS_scene(t0)
+    li   t2, SCENE_MENU
+    beq  t1, t2, GL_MENU_FLOW
+    li   t2, SCENE_TRANSITION
+    beq  t1, t2, GL_BLACKSCREEN_FLOW
+    li   t2, SCENE_WIN
+    beq  t1, t2, GL_BLACKSCREEN_FLOW
+    j    GL_GAME_FLOW
+
+# -------------------------------------------------------------------- #
+#  MENU: tela preta mock + espera qualquer tecla (ver scene.s)         #
+# -------------------------------------------------------------------- #
+GL_MENU_FLOW:
+    call MENU_UPDATE        # pode trocar a cena p/ SCENE_GAME (LEVEL_ENTER_W1)
+    call RENDER_BLACKSCREEN
+    call MUSIC_SELECT        # forca MUS_INICIO enquanto SCENE_MENU
+    call MUSIC_LOOP
+    j    GL_FRAME_END
+
+# -------------------------------------------------------------------- #
+#  TRANSITION (porta) / WIN: tela preta, so a musica troca por cena.   #
+#  TRANSITION_UPDATE conta o timer da porta e troca de mapa ao zerar   #
+#  (SCENE_WIN nao tem update proprio: e uma cena terminal, so espera). #
+# -------------------------------------------------------------------- #
+GL_BLACKSCREEN_FLOW:
+    li   t2, SCENE_TRANSITION
+    bne  t1, t2, GL_BS_RENDER
+    call TRANSITION_UPDATE
+GL_BS_RENDER:
+    call RENDER_BLACKSCREEN
+    call MUSIC_SELECT        # forca MUS_VITORIA em SCENE_WIN; em SCENE_TRANSITION
+    call MUSIC_LOOP           # nao mexe no id (a musica da fase anterior continua)
+    j    GL_FRAME_END
+
+# -------------------------------------------------------------------- #
+#  GAME: pipeline normal (inalterado, so o stub de DOOR_UPDATE virou   #
+#  implementacao real, em level.s).                                   #
+# -------------------------------------------------------------------- #
+GL_GAME_FLOW:
     call INPUT_READ        # 1. le teclado -> GAME_STATE.input_bits
     call PLAYER_UPDATE     # 2. movimento, pulo, gravidade do Mega Man
     call ABILITY_UPDATE    # 3. troca de arma/habilidade ativa
     call ATTACK_UPDATE     # 4. spawn e movimento dos tiros do Buster
     call ENEMY_UPDATE      # 5. IAs dos inimigos + chefao
     call COLLISION_UPDATE  # 6. colisoes (mapa, inimigo, tiro, itens)
-    call DOOR_UPDATE       # 7. transicao de area por porta
+    call DOOR_UPDATE       # 7. porta/gatilho de vitoria (level.s)
 
-# ==================================================================== #
-#  RENDER -- ordem importa (fundo primeiro, HUD por ultimo)            #
-# ==================================================================== #
     call CAMERA_UPDATE     # 8b. atualiza scroll (player centralizado, trava bordas)
-    call RENDER_MAP_FRAME  # 9.  mapa + scroll (apaga rastro) - ver stub abaixo
-    call RENDER_ENTITIES   # 10. inimigos, projeteis, itens
+    call RENDER_MAP_FRAME  # 9.  mapa + scroll (apaga rastro)
+    call RENDER_ENTITIES   # 10. inimigos, projeteis, itens, porta
     call RENDER_PLAYER     # 11. Mega Man por cima das entidades
     call RENDER_HUD        # 12. vida e carga das habilidades
 
-# ==================================================================== #
-#  AUDIO                                                               #
-# ==================================================================== #
     call MUSIC_SELECT      # 12b. escolhe a musica pela cena/estado (re-arma se mudou)
     call MUSIC_LOOP        # 13. avanca a musica armada
     call SFX_UPDATE        # 14. efeitos sonoros pendentes
 
 # ==================================================================== #
 #  15. Fecha o frame: seleciona frame a exibir + marca tempo           #
+#      (comum a TODOS os fluxos acima)                                #
 # ==================================================================== #
+GL_FRAME_END:
     la   t0, GAME_STATE
     lw   t1, GS_frame(t0)        # com double buffering off, sempre 0
     li   t2, VGAFRAMESELECT      # endereco de selecao de frame do bitmap (MACROSv24)
@@ -135,15 +175,7 @@ ABILITY_UPDATE:
 # -------------------------------------------------------------------- #
 # COLLISION_UPDATE -> implementado em collision.s
 # -------------------------------------------------------------------- #
-#  DOOR_UPDATE                                                         #
-#  Detecta o player numa porta e dispara a troca de area. Req 7.       #
-#  O motor JA suporta troca via MAP_INFO render byte 3 (ver setup.s /  #
-#  data.s NEXT_MAP). Esta rotina so decide QUANDO trocar.              #
-#  TODO: se player sobre tile-porta, setar NEXT_MAP e render byte 3.   #
-# -------------------------------------------------------------------- #
-DOOR_UPDATE:
-    ret
-
+#  DOOR_UPDATE  -> implementado em level.s (porta + gatilho de vitoria)#
 # -------------------------------------------------------------------- #
 #  RENDER_MAP_FRAME                                                    #
 # -------------------------------------------------------------------- #

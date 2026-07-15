@@ -32,10 +32,12 @@ main:
     # Inicializacao minima. O estado ja nasce com valores default em
     # state.s; aqui so garantimos a cena inicial e partimos pro setup.
     la   t0, GAME_STATE
-    li   t1, SCENE_GAME
-    sw   t1, GS_scene(t0)        # comeca direto no jogo (menu vem depois)
+    li   t1, SCENE_MENU
+    sw   t1, GS_scene(t0)        # comeca na tela inicial mock (aperte qualquer tecla)
 
-    call ENEMY_SPAWN_INIT        # semeia inimigos de teste
+    # NAO chama ENEMY_SPAWN_INIT aqui: LEVEL_ENTER_W1 (level.s) faz isso
+    # ao sair do menu, junto com o resto do setup da fase 1 (spawn,
+    # musica, camera, pools). Ver scene.s (MENU_UPDATE).
 
     j SETUP                      # SETUP renderiza o mapa e cai no GAME_LOOP
 
@@ -62,6 +64,8 @@ main:
 .include "enemies.s"
 .include "items.s"             # ITEM_DROP / ITEM_PICKUP_UPDATE (cura/recarga, req 6)
 .include "collision.s"         # COLLISION_UPDATE (mapa, dano, tiro x inimigo, itens)
+.include "level.s"             # DOOR_UPDATE / TRANSITION_UPDATE / LEVEL_ENTER_* (req 7)
+.include "scene.s"              # MENU_UPDATE / RENDER_BLACKSCREEN (menu, porta, vitoria)
 .include "render_hud.s"        # RENDER_HUD (barra de vida, req 5)
 .include "music_data.s"        # DADOS de todas as musicas + MUSIC_TABLE
 .include "music_state.s"       # MUSIC_SELECT (escolhe a musica pela cena/estado)

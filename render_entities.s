@@ -149,6 +149,58 @@ RE_IT_NEXT:
     addi s1, s1, -1
     bnez s1, RE_IT_LOOP
 
+    # ================= 4a passada: PORTA / GATILHO DE VITORIA ======= #
+    # Placeholder visual do req 7 (porta) e do req 8 (chefe ainda nao   #
+    # implementado -- so um marcador do gatilho de vitoria na arena).   #
+    # Estatico (sem pool): 1 por fase, conforme GS_level.               #
+    la   t0, GAME_STATE
+    lw   t0, GS_level(t0)
+
+    li   t1, LEVEL_W1
+    bne  t0, t1, RE_DOOR_CHK_W2
+    la   a0, DOOR_SPRITE
+    li   a1, DOOR_W1_X
+    li   a2, DOOR_W1_Y
+    li   a3, DOOR_W
+    li   a4, DOOR_H
+    j    RE_DOOR_DRAW
+RE_DOOR_CHK_W2:
+    li   t1, LEVEL_W2
+    bne  t0, t1, RE_DOOR_CHK_BOSS
+    la   a0, DOOR_SPRITE
+    li   a1, DOOR_W2_X
+    li   a2, DOOR_W2_Y
+    li   a3, DOOR_W
+    li   a4, DOOR_H
+    j    RE_DOOR_DRAW
+RE_DOOR_CHK_BOSS:
+    li   t1, LEVEL_BOSS
+    bne  t0, t1, RE_END          # fase desconhecida: nada a desenhar
+    la   a0, WIN_MARKER_SPRITE
+    li   a1, WIN_TRIGGER_X
+    li   a2, WIN_TRIGGER_Y
+    li   a3, 16                  # WIN_MARKER_SPRITE e 16x16 (so um marcador)
+    li   a4, 16
+
+RE_DOOR_DRAW:
+    # a1/a2 chegam em coordenadas de MUNDO -> converte p/ tela e cull,
+    # mesmo padrao das outras 3 passadas acima.
+    la   t0, GAME_STATE
+    lw   t1, GS_cam_x(t0)
+    sub  a1, a1, t1              # X de tela = mundo - cam_x
+    bltz a1, RE_END              # saiu pela esquerda
+    li   t2, 320
+    sub  t2, t2, a3
+    bgt  a1, t2, RE_END          # saiu pela direita
+    bltz a2, RE_END              # saiu por cima
+    li   t2, 240
+    sub  t2, t2, a4
+    bgt  a2, t2, RE_END          # saiu por baixo
+    lw   a5, GS_frame(t0)
+    li   a6, 0
+    li   a7, 0
+    call RENDER_SPRITE
+
 RE_END:
     lw   ra, 8(sp)
     lw   s0, 4(sp)
