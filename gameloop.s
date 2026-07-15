@@ -147,14 +147,7 @@ GL_FRAME_END:
 # -------------------------------------------------------------------- #
 
 # -------------------------------------------------------------------- #
-#  ABILITY_UPDATE                                                      #
-#  Troca a arma/habilidade ativa (PLAYER_ability) na borda de subida   #
-#  de INPUT_SWAP.  Req 4 (min. 2 habilidades).                         #
-#  TODO: detectar borda com input_bits & ~input_prev; ciclar ability.  #
-# -------------------------------------------------------------------- #
-ABILITY_UPDATE:
-    ret
-
+#  ABILITY_UPDATE  -> implementado em ability.s (pulo duplo/dash, req 4)#
 # -------------------------------------------------------------------- #
 #  ATTACK_UPDATE  -> implementado em attack.s                          #
 # -------------------------------------------------------------------- #

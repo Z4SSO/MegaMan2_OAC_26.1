@@ -205,7 +205,9 @@ GAME_STATE:
 .eqv PLAYER_on_ground 40  # word: 1 se pisando em tile solido, 0 se no ar
 .eqv PLAYER_health    44  # word: pontos de vida atuais
 .eqv PLAYER_max_hp    48  # word: vida maxima
-.eqv PLAYER_ability   52  # word: habilidade/arma ativa (0 = Buster)
+.eqv PLAYER_ability   52  # word: habilidade de movimentacao ATIVA (ABILITY_*).
+                          #   Sem 2o tipo de ataque: as 2 habilidades do req 4
+                          #   sao pulo duplo e dash, ambas de movimentacao.
 .eqv PLAYER_invuln    56  # word: frames restantes de i-frames
 # ---- Carga de habilidade de movimentacao (dash / pulo duplo) -------- #
 # "Municao" das habilidades de MOVIMENTACAO do req 4 (nao sao ataques:
@@ -213,11 +215,25 @@ GAME_STATE:
 # recarga (items.s) devolvem carga. Max/recarga ALTOS de proposito --
 # usar uma habilidade de movimentacao e algo natural que deve ser
 # ENCORAJADO; so o "overuse" (spam) deve ser punido.
-# ABILITY_UPDATE (ainda stub) e quem vai LER/GASTAR isto ao implementar
-# dash/pulo duplo -- os campos ja existem para nao travar os itens.
+# ABILITY_UPDATE (ability.s) troca PLAYER_ability na borda de INPUT_SWAP;
+# player.s LE/GASTA a carga ao executar o pulo duplo ou o dash.
 .eqv PLAYER_ability_charge     60  # word: carga atual (0..PLAYER_ability_charge_max)
 .eqv PLAYER_ability_charge_max 64  # word: carga maxima
 .eqv PLAYER_ABILITY_CHARGE_MAX 100 # valor da carga maxima (alto: nao deve travar o uso normal)
+# ---- Estado do pulo duplo / dash (player.s) ------------------------- #
+.eqv PLAYER_air_used   68  # word: 1 = ja usou a habilidade aerea nesta queda/pulo
+                            #   (zera ao pisar no chao; permite 1 uso por "voo").
+.eqv PLAYER_dash_timer 72  # word: frames restantes do dash em andamento (0 = parado)
+
+# --- Habilidades de movimentacao (req 4): so estas 2, sem ataque extra --- #
+.eqv ABILITY_DOUBLEJUMP  0  # 2o pulo no ar (mesma vy do pulo normal)
+.eqv ABILITY_DASH        1  # rajada horizontal, trava vy=0 por DASH_DURATION frames
+
+.eqv ABILITY_COST_JUMP  20  # carga gasta por pulo duplo (de 100 max)
+.eqv ABILITY_COST_DASH  15  # carga gasta por dash (de 100 max)
+.eqv DASH_DURATION       8  # frames com vx travado em DASH_SPEED_F (sem gravidade)
+DASH_SPEED_F:  .float 7.0   # px/frame durante o dash (vx_max normal e 3.0)
+PLAYER_VX_MAX_DEFAULT: .float 3.0  # valor pra restaurar PH_vx_max quando o dash acaba
 
 PLAYER:
     # --- bloco de fisica (float) --- #
@@ -235,10 +251,12 @@ PLAYER:
     .word 0             # PLAYER_on_ground
     .word 28            # PLAYER_health
     .word 28            # PLAYER_max_hp
-    .word 0             # PLAYER_ability
+    .word ABILITY_DOUBLEJUMP  # PLAYER_ability (comeca com pulo duplo equipado)
     .word 0             # PLAYER_invuln
     .word PLAYER_ABILITY_CHARGE_MAX  # PLAYER_ability_charge (comeca cheia)
     .word PLAYER_ABILITY_CHARGE_MAX  # PLAYER_ability_charge_max
+    .word 0             # PLAYER_air_used
+    .word 0             # PLAYER_dash_timer
 
 # ==================================================================== #
 #  PLAYER_SPRITE  --  PLACEHOLDER 16x16 (256 bytes)                    #

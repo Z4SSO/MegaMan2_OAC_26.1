@@ -55,6 +55,7 @@ main:
 # .include "input_scancode.s"  # INPUT_READ (scancode PS/2, so DE2)
 .include "physics.s"           # PHYSICS_STEP (engine de fisica float)
 .include "player.s"            # PLAYER_UPDATE (intencao + chama engine)
+.include "ability.s"           # ABILITY_UPDATE (troca pulo duplo/dash, req 4)
 .include "render_map_frame.s"  # RENDER_MAP_FRAME (redesenho do mapa por frame)
 .include "camera.s"            # CAMERA_UPDATE (scroll horizontal, req 9)
 .include "render_player.s"     # RENDER_PLAYER (desenha o personagem)
