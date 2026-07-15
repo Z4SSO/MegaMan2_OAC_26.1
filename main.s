@@ -60,7 +60,8 @@ main:
 .include "attack.s"            # ATTACK_UPDATE (tiros do Buster, req 2)
 .include "render_entities.s"   # RENDER_ENTITIES (desenha projeteis/inimigos)
 .include "enemies.s"
-.include "collision.s"         # COLLISION_UPDATE (mapa, dano, tiro x inimigo)
+.include "items.s"             # ITEM_DROP / ITEM_PICKUP_UPDATE (cura/recarga, req 6)
+.include "collision.s"         # COLLISION_UPDATE (mapa, dano, tiro x inimigo, itens)
 .include "render_hud.s"        # RENDER_HUD (barra de vida, req 5)
 .include "music_data.s"        # DADOS de todas as musicas + MUSIC_TABLE
 .include "music_state.s"       # MUSIC_SELECT (escolhe a musica pela cena/estado)

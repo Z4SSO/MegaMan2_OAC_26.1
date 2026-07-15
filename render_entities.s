@@ -111,6 +111,44 @@ RE_EN_NEXT:
     addi s1, s1, -1
     bnez s1, RE_EN_LOOP
 
+    # ================= 3a passada: ITENS (cura/recarga) ============= #
+    la   s0, ITEM_POOL
+    li   s1, ITEM_MAX
+RE_IT_LOOP:
+    lw   t0, IT_active(s0)
+    beqz t0, RE_IT_NEXT
+
+    lw   t0, IT_type(s0)
+    li   t1, ITEM_TYPE_HEAL
+    beq  t0, t1, RE_IT_SPR
+    la   a0, ITEM_CHARGE_SPRITE
+    j    RE_IT_DRAW
+RE_IT_SPR:
+    la   a0, ITEM_HEAL_SPRITE
+RE_IT_DRAW:
+    lw   a1, IT_x(s0)             # X de MUNDO (item e estatico, sem PH_*)
+    la   t0, GAME_STATE
+    lw   t1, GS_cam_x(t0)
+    sub  a1, a1, t1              # X de tela = mundo - cam_x
+    bltz a1, RE_IT_NEXT          # CULL: saiu pela esquerda
+    li   t2, 304                 # 320 - ITEM_W(16)
+    bgt  a1, t2, RE_IT_NEXT      # saiu pela direita
+    lw   a2, IT_y(s0)             # Y (sem scroll vertical)
+    bltz a2, RE_IT_NEXT
+    li   t2, 224                 # 240 - ITEM_H(16)
+    bgt  a2, t2, RE_IT_NEXT
+    li   a3, ITEM_W
+    li   a4, ITEM_H
+    lw   a5, GS_frame(t0)
+    li   a6, 0
+    li   a7, 0
+    call RENDER_SPRITE
+
+RE_IT_NEXT:
+    addi s0, s0, ITEM_STRIDE
+    addi s1, s1, -1
+    bnez s1, RE_IT_LOOP
+
 RE_END:
     lw   ra, 8(sp)
     lw   s0, 4(sp)

@@ -10,9 +10,12 @@
 #    1. player   <-> mapa   (resolve + alimenta PLAYER_on_ground)      #
 #    2. inimigos <-> mapa   (corredor ganha chao real; voador paredes) #
 #    3. tiros    <-> mapa   (tiro some ao acertar tile solido)         #
-#       tiros    <-> inimigos (hp--; hp==0 -> inimigo morre)           #
-#    4. player   <-> inimigos (dano 1 + 90 frames de i-frames;         #
+#       tiros    <-> inimigos (hp--; hp==0 -> inimigo morre e dropa    #
+#       um item de cura/recarga -- ver ITEM_DROP em items.s)           #
+#    4. player   <-> inimigos (dano por tipo + 90 frames de i-frames;  #
 #       health==0 -> GS_scene = SCENE_GAMEOVER, musica troca sozinha)  #
+#    5. player   <-> itens   (ITEM_PICKUP_UPDATE em items.s: cura ou   #
+#       recarga de habilidade, clamp no maximo, libera o slot)         #
 #                                                                      #
 #  RESOLVE_MAP: resolvedor generico p/ qualquer entidade com bloco     #
 #  PH_* no inicio (player e inimigos usam o MESMO codigo). Resolve     #
@@ -300,6 +303,14 @@ CU_PE_BOX:
     sw   a6, EN_hp(s2)
     bgtz a6, CU_PR_NEXT
     sw   zero, EN_active(s2)       # morreu: libera o slot
+    # dropa item de cura/recarga no centro da caixa do inimigo (req 6).
+    # t4/t5 ainda tem x/y do inimigo, t6 a altura por tipo (setados no
+    # topo do CU_PE_LOOP); largura e sempre 32 (EN_FLYER_W==EN_RUNNER_W).
+    mv   a0, t4
+    mv   a1, t5
+    li   a2, 32
+    mv   a3, t6
+    call ITEM_DROP
     j    CU_PR_NEXT
 CU_PE_NEXT:
     addi s2, s2, EN_STRIDE
@@ -364,6 +375,9 @@ CU_PL_NEXT:
     addi s0, s0, EN_STRIDE
     addi s1, s1, -1
     bnez s1, CU_PL_LOOP
+
+    # ---- 5. player <-> itens (coleta de cura/recarga, req 6) -------- #
+    call ITEM_PICKUP_UPDATE
 
 CU_END:
     lw   ra, 12(sp)

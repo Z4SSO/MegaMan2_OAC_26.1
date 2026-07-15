@@ -152,6 +152,17 @@ GAME_STATE:
 .eqv PLAYER_max_hp    48  # word: vida maxima
 .eqv PLAYER_ability   52  # word: habilidade/arma ativa (0 = Buster)
 .eqv PLAYER_invuln    56  # word: frames restantes de i-frames
+# ---- Carga de habilidade de movimentacao (dash / pulo duplo) -------- #
+# "Municao" das habilidades de MOVIMENTACAO do req 4 (nao sao ataques:
+# sao dash e pulo duplo). Usar uma habilidade gasta carga; itens de
+# recarga (items.s) devolvem carga. Max/recarga ALTOS de proposito --
+# usar uma habilidade de movimentacao e algo natural que deve ser
+# ENCORAJADO; so o "overuse" (spam) deve ser punido.
+# ABILITY_UPDATE (ainda stub) e quem vai LER/GASTAR isto ao implementar
+# dash/pulo duplo -- os campos ja existem para nao travar os itens.
+.eqv PLAYER_ability_charge     60  # word: carga atual (0..PLAYER_ability_charge_max)
+.eqv PLAYER_ability_charge_max 64  # word: carga maxima
+.eqv PLAYER_ABILITY_CHARGE_MAX 100 # valor da carga maxima (alto: nao deve travar o uso normal)
 
 PLAYER:
     # --- bloco de fisica (float) --- #
@@ -171,6 +182,8 @@ PLAYER:
     .word 28            # PLAYER_max_hp
     .word 0             # PLAYER_ability
     .word 0             # PLAYER_invuln
+    .word PLAYER_ABILITY_CHARGE_MAX  # PLAYER_ability_charge (comeca cheia)
+    .word PLAYER_ABILITY_CHARGE_MAX  # PLAYER_ability_charge_max
 
 # ==================================================================== #
 #  PLAYER_SPRITE  --  PLACEHOLDER 16x16 (256 bytes)                    #
@@ -374,3 +387,87 @@ RUNNER_SPRITE:
     .byte  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     .byte  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     .byte  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+# ==================================================================== #
+#  ITEM POOL  --  colecionaveis de cura/recarga (req 6)                #
+#  ------------------------------------------------------------------  #
+#  Dropados por ITEM_DROP (items.s) quando um inimigo morre em         #
+#  collision.s (CU_PE_BOX, "morreu: libera o slot"). Estaticos (sem    #
+#  fisica/velocidade -- ficam parados ate serem coletados). Coletados  #
+#  por ITEM_PICKUP_UPDATE (items.s), chamado no fim de COLLISION_UPDATE#
+#  como um novo passo (5. player <-> itens).                           #
+#                                                                      #
+#  Layout de um slot (offsets a partir do inicio do slot):             #
+#    IT_active  0  : 0 = livre, 1 = no chao esperando coleta           #
+#    IT_x       4  : X de MUNDO (top-left, pixel inteiro)              #
+#    IT_y       8  : Y de MUNDO (top-left, pixel inteiro)              #
+#    IT_type   12  : ITEM_TYPE_HEAL ou ITEM_TYPE_CHARGE                #
+#  ITEM_STRIDE = 16 bytes por slot.                                    #
+# ==================================================================== #
+.eqv ITEM_MAX      6      # slots simultaneos de item no chao
+.eqv ITEM_STRIDE   16     # bytes por slot (4 words)
+.eqv IT_active     0
+.eqv IT_x          4
+.eqv IT_y          8
+.eqv IT_type       12
+
+.eqv ITEM_TYPE_HEAL    0  # restaura PLAYER_health (clamp em max_hp)
+.eqv ITEM_TYPE_CHARGE  1  # restaura PLAYER_ability_charge (clamp em max)
+
+.eqv ITEM_W   16     # dimensoes do sprite/AABB do item
+.eqv ITEM_H   16
+
+# --- Botoes de balanceamento do drop ---------------------------------#
+# Cura moderada (nem trivializa, nem obriga farm); recarga de habilidade
+# ALTA de proposito (usar dash/pulo duplo deve ser natural -- ver nota
+# em PLAYER_ability_charge_max no struct PLAYER, acima).
+.eqv ITEM_HEAL_AMOUNT    10  # pontos de vida restaurados (de 28 max)
+.eqv ITEM_CHARGE_AMOUNT  40  # pontos de carga restaurados (de 100 max)
+
+.data
+.align 2
+ITEM_POOL:
+    .space 96    # ITEM_MAX(6) * ITEM_STRIDE(16)
+
+# ------------------------------------------------------------------- #
+#  Sprites placeholder 16x16 (256 bytes cada), 1 byte/pixel, mesmo     #
+#  estilo dos outros placeholders deste arquivo (cor solida + cantos   #
+#  pretos p/ dar silhueta -- SEM cor 199, isso e so para sprites reais #
+#  ja integrados). SUBSTITUIR quando o sprite do item chegar.          #
+#  HEAL = cruz verde (indice 28). CHARGE = losango ciano (indice 31).  #
+# ------------------------------------------------------------------- #
+ITEM_HEAL_SPRITE:
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
+    .byte 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
+    .byte 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
+    .byte 28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,28,28,28,28, 0, 0, 0, 0, 0, 0
+
+ITEM_CHARGE_SPRITE:
+    .byte  0, 0, 0, 0, 0, 0, 0,31,31, 0, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,31,31,31,31, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0,31,31,31,31,31,31, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0,31,31,31,31,31,31,31,31, 0, 0, 0, 0
+    .byte  0, 0, 0,31,31,31,31,31,31,31,31,31,31, 0, 0, 0
+    .byte  0, 0,31,31,31,31,31,31,31,31,31,31,31,31, 0, 0
+    .byte  0,31,31,31,31,31,31,31,31,31,31,31,31,31,31, 0
+    .byte 31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31
+    .byte 31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31
+    .byte  0,31,31,31,31,31,31,31,31,31,31,31,31,31,31, 0
+    .byte  0, 0,31,31,31,31,31,31,31,31,31,31,31,31, 0, 0
+    .byte  0, 0, 0,31,31,31,31,31,31,31,31,31,31, 0, 0, 0
+    .byte  0, 0, 0, 0,31,31,31,31,31,31,31,31, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0,31,31,31,31,31,31, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0,31,31,31,31, 0, 0, 0, 0, 0, 0
+    .byte  0, 0, 0, 0, 0, 0, 0,31,31, 0, 0, 0, 0, 0, 0, 0
