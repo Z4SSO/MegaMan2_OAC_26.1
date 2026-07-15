@@ -195,12 +195,13 @@ RENDER_MAP:
 RENDER_MAP_LOOP:
 
 	# Getting tile information from the map matrix
-	lbu t1,0(s0)		# t1 = tile ID (0 means empty/black)
+	lbu t1,0(s0)		# t1 = tile ID (21 means empty/background - dummy tile)
 	mv t0,zero		# default address for color render
 	mv t4,zero		# default sprite status
-	beqz t1,RENDER_MAP_SaveRegisters
+	li t5,21		# t5 = ID treated as empty/background (dummy tile)
+	beq t1,t5,RENDER_MAP_SaveRegisters
 	slli t0,t1,8		# each tile sprite has 16 x 16 = 256 bytes
-	la t4,Tileset_W1
+	la t4,Tileset
 	add t0,t4,t0		# t0 = address of tile sprite
 	mv t4,zero		# tiles use sprite status 0
 
@@ -266,7 +267,10 @@ RENDER_MAP_LOOP:
 		j START_RENDER_MAP	 # start rendering process
 	
 	START_RENDER_MAP:
-	bnez t1,NormalRender
+	li t0,21
+	beq t1,t0,ColorRenderBlock
+	j NormalRender
+	ColorRenderBlock:
 	# Color Render
 		li a0, 0x00 		# Black
 		mv a1, t4		# Top Left X
